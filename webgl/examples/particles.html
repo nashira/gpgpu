@@ -38,55 +38,7 @@
     canvas.style.width = canvas.style.height = '100%';
     var gl = canvas.getContext('webgl');
 
-    // var vertexShader = [
-    //   'precision highp float;',
-    //   'attribute vec2 position;',
-    //   'attribute vec3 color;',
-    //   'varying vec3 vColor;',
-    //   'varying vec2 vPos;',
-    //   'void main() {',
-    //   '  vColor = color;',
-    //   '  vPos = position;',
-    //   '  gl_Position = vec4(position * 2. - 1., 0.0, 1.0);',
-    //   '}'
-    //   ].join('\n');
-    // 
-    // var fragmentShader = [
-    //   'precision highp float;',
-    //   'varying vec3 vColor;',
-    //   'varying vec2 vPos;',
-    //   ShaderLib.noise2d,
-    //   'float fn() {',
-    //   '  return snoise(vPos * 4.) + snoise(vPos * 8.) * 0.5 + snoise(vPos * 16.) * 0.25 + snoise(vPos * 32.) * 0.125;',
-    //   '}',
-    //   'void main() {',
-    //   '  float n = fn();',
-    //   '  gl_FragColor = vec4(vColor * (n * 0.5 + 0.5), 1.);',
-    //   // '  gl_FragColor = vec4(vec3(n * 0.5 + 0.5), 1.);',
-    //   '}'
-    //   ].join('\n');
-    // 
-    // var position = new DataBuffer(2, 4);
-    // position.setBuffer(new Float32Array([0,1,0,0,1,0,1,1]));
-    // 
-    // var color = new DataBuffer(3, 4);
-    // var ca = []; for(var i = 0; i < 12; i++) ca.push(Math.random());
-    // color.setBuffer(new Float32Array(ca));
-    // 
-    // var program = new Program(vertexShader, fragmentShader);
-    // program.addAttribute('position', 2, gl.FLOAT);
-    // program.setAttributeBuffer('position', position);
-    // 
-    // program.addAttribute('color', 3, gl.FLOAT);
-    // program.setAttributeBuffer('color', color);
-    // 
-    // program.setIndecies([0,1,2,0,2,3]);
-    // 
-    // var renderTarget = new RenderTarget(256, 256);
-    // program.setRenderTarget(renderTarget, true)
-    
-
-    var vertexShader2 = [
+    var vertexShader = [
       'precision highp float;',
       'attribute vec3 position;',
       'uniform mat4 matrix;',
@@ -96,40 +48,40 @@
       '}'
       ].join('\n');
 
-    var fragmentShader2 = [
+    var fragmentShader = [
       'precision highp float;',
       'void main() {',
       '  gl_FragColor = vec4(1.);',
       '}'
       ].join('\n');
       
-    var program2 = new Program(vertexShader2, fragmentShader2);
+    var program = new Program(vertexShader, fragmentShader);
     var position = new DataBuffer(3, 1000);
     position.setBuffer(new Float32Array(getGrid(10)));
 
-    program2.addAttribute('position', 3, gl.FLOAT);
-    program2.setAttributeBuffer('position', position);
+    program.addAttribute('position', 3, gl.FLOAT);
+    program.setAttributeBuffer('position', position);
     
-    program2.addUniform('matrix', 'm4');
+    program.addUniform('matrix', 'm4');
     
-    program2.setViewport(0, 0, width * 2, height * 2);
+    program.setViewport(0, 0, width * 2, height * 2);
 
-    program2.drawMode = gl.PARTICLES;
+    program.drawMode = gl.PARTICLES;
     
     var angle = 0;
     var rm = Matrix.makeYRotation(angle);
     // var sm = Matrix.makeScale(0.01, 0.01, 0.01);
     var tm = Matrix.makeTranslation(0, 0, -15);
     var pm = Matrix.makePerspective(1, width / height, 0, 1000);
-    // pm = Matrix.matrixMultiply(pm, tm);
-    // program2.setUniform('matrix', pm);
-    program2.setUniform('matrix', pm);
+
+    program.setUniform('matrix', pm);
     function animate() {
       angle += 0.003;
       Matrix.setYRotation(rm, angle);
       var m = Matrix.multiply(rm, tm, pm);
-      program2.setUniform('matrix', m);
-      program2.draw(0, 1000);
+      program.setUniform('matrix', m);
+      program.draw(0, 1000);
+      
       requestAnimationFrame(animate);
     }
     animate();
