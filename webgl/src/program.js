@@ -4,10 +4,12 @@ var Program;
     params = params || {};
     this.attributes = {};
     this.uniforms = {};
-    this.viewport = {x: 0, y: 0, w: 500, h: 500};
+    this.viewport = {x: 0, y: 0, w: 1, h: 1};
     this.glProgram = null;
     this.renderTarget = null;
     this.framebuffer = null;
+    this.renderbuffer = null;
+    this.indexBuffer = null;
     this.drawMode = params.drawMode || gl.TRIANGLES;
     // this.drawFirst = 0;
     // this.drawCount = 0;
@@ -18,12 +20,12 @@ var Program;
   }
 
   Program.prototype.buildProgram = function (vertexShader, fragmentShader) {
-    var vertextShaderId = gl.createShader(gl.VERTEX_SHADER);
+    var vertexShaderId = gl.createShader(gl.VERTEX_SHADER);
     var fragmentShaderId = gl.createShader(gl.FRAGMENT_SHADER);
 
-    gl.shaderSource(vertextShaderId, vertextShader);
-    gl.compileShader(vertextShaderId);
-    console.log('getShaderInfoLog', gl.getShaderInfoLog(vertextShaderId));
+    gl.shaderSource(vertexShaderId, vertexShader);
+    gl.compileShader(vertexShaderId);
+    console.log('getShaderInfoLog', gl.getShaderInfoLog(vertexShaderId));
 
     gl.shaderSource(fragmentShaderId, fragmentShader);
     gl.compileShader(fragmentShaderId);
@@ -32,17 +34,18 @@ var Program;
     this.glProgram = gl.createProgram();
     console.log(this.glProgram);
 
-    gl.attachShader(this.glProgram, vertextShaderId);
+    gl.attachShader(this.glProgram, vertexShaderId);
     gl.attachShader(this.glProgram, fragmentShaderId);
     gl.linkProgram(this.glProgram);
   
-    console.log('LINK_STATUS', gl.getProgramParameter(this.glProgram, gl.LINK_STATUS));
-    console.log('VALIDATE_STATUS', gl.getProgramParameter(this.glProgram, gl.VALIDATE_STATUS));
-    console.log('getError', gl.getError());
+    if (!gl.getProgramParameter(this.glProgram, gl.LINK_STATUS)) {
+      console.log('VALIDATE_STATUS', gl.getProgramParameter(this.glProgram, gl.VALIDATE_STATUS));
+      console.log('getError', gl.getError());
+    }
     console.log('getProgramInfoLog', gl.getProgramInfoLog(this.glProgram));
   
+    gl.deleteShader(vertexShaderId);
     gl.deleteShader(fragmentShaderId);
-    gl.deleteShader(vertextShaderId);
   }
   
   Program.prototype.initAttribute = function (name) {
@@ -90,6 +93,13 @@ var Program;
     }
   }
 
+  Program.prototype.unloadAttributes = function () {
+    for (var k in this.attributes) {
+      var attr = this.attributes[k];
+      gl.disableVertexAttribArray(attr.location);
+    }
+  }
+
   Program.prototype.addUniform = function (name, type, value) {
     var uni = this.uniforms[name] = {
       name: name,
@@ -97,7 +107,7 @@ var Program;
       type: type || 'f',
       value: value || null
     }
-    this.initAttribute(name);
+    this.initUniform(name);
   }
   
   Program.prototype.setUniform = function (name, value) {
@@ -129,9 +139,19 @@ var Program;
     }
   }
   
+  Program.prototype.setIndecies = function (array) {
+    this.useIndecies = true;
+    this.indexBuffer = gl.createBuffer();
+    
+		gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
+		gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(array), gl.STATIC_DRAW);
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
+  }
+  
   Program.prototype.setRenderTarget = function (renderTarget, setViewport) {
     this.renderTarget = renderTarget;
     this.framebuffer = (renderTarget && renderTarget.framebuffer) || null;
+    this.renderbuffer = (renderTarget && renderTarget.renderbuffer) || null;
   
     if (renderTarget && setViewport) {
       this.setViewport(0, 0, renderTarget.width, renderTarget.height);
@@ -144,14 +164,22 @@ var Program;
 
   Program.prototype.draw = function (first, count) {
     gl.useProgram(this.glProgram);
-  
     gl.bindFramebuffer(gl.FRAMEBUFFER, this.framebuffer);
+    gl.bindRenderbuffer(gl.RENDERBUFFER, this.renderbuffer);
   
     var vp = this.viewport;
     gl.viewport(vp.x, vp.y, vp.w, vp.h);
     
     this.loadUniforms();
     this.loadAttributes();
-    gl.drawArrays(this.drawMode, first, count);
+    
+    if (this.indexBuffer != null) {
+      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
+      gl.drawElements(this.drawMode, count, gl.UNSIGNED_SHORT, first * 2);
+    } else {
+      gl.drawArrays(this.drawMode, first, count);
+    }
+
+    this.unloadAttributes();
   }
 }());
