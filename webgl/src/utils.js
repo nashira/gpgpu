@@ -120,14 +120,15 @@ var Utils, Matrix;
     },
     
     multiply: function () {
-      var m = arguments[0].concat();
+      var m = arguments[0], t = [];
       for (var i = 1; i < arguments.length; i++) {
-        Matrix._multiply(m, arguments[i], m);
+        Matrix.multiplyMatrix(m, arguments[i], t);
+        m = t;
       }
       return m;
     },
 
-    _multiply: function(a, b, c) {
+    multiplyMatrix: function(a, b, c) {
       c = c || [];
       var a00 = a[0];
       var a01 = a[1];

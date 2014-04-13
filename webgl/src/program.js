@@ -10,6 +10,9 @@ var Program;
     this.framebuffer = null;
     this.renderbuffer = null;
     this.indexBuffer = null;
+    this.blendEnabled = false;
+    this.blendEquation = gl.FUNC_ADD;
+    this.blendFunc = [gl.SRC_ALPHA, gl.ONE];
     this.drawMode = params.drawMode || gl.TRIANGLES;
     // this.drawFirst = 0;
     // this.drawCount = 0;
@@ -166,6 +169,22 @@ var Program;
     gl.useProgram(this.glProgram);
     gl.bindFramebuffer(gl.FRAMEBUFFER, this.framebuffer);
     gl.bindRenderbuffer(gl.RENDERBUFFER, this.renderbuffer);
+    
+    if (this.blendEnabled) {
+      gl.enable(gl.BLEND);
+      if (this.blendEquation.length) {
+        gl.blendEquationSeparate(this.blendEquation[0], this.blendEquation[1]);
+      } else {
+        gl.blendEquation(this.blendEquation);
+      }
+      if (this.blendFunc.length == 4) {
+        gl.blendFuncSeparate(this.blendFunc[0], this.blendFunc[1], this.blendFunc[2], this.blendFunc[3]);
+      } else {
+        gl.blendFunc(this.blendFunc[0], this.blendFunc[1]);
+      }
+    } else {
+      gl.disable(gl.BLEND);
+    }
   
     var vp = this.viewport;
     gl.viewport(vp.x, vp.y, vp.w, vp.h);
