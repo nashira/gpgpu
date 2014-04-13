@@ -44,14 +44,22 @@ var Program;
     gl.deleteShader(fragmentShaderId);
     gl.deleteShader(vertextShaderId);
   }
-
-  Program.prototype.initAttributes = function () {
-    gl.useProgram(this.glProgram);
   
-    for (var k in this.attributes) {
-      var attr = this.attributes[k];
-      attr.location = gl.getAttribLocation(this.glProgram, k);
-      console.log('getAttribLocation', k, attr.location);
+  Program.prototype.initAttribute = function (name) {
+    if (this.glProgram != null) {
+      gl.useProgram(this.glProgram);
+      var attr = this.attributes[name];
+      attr.location = gl.getAttribLocation(this.glProgram, name);
+      console.log('initAttribute', name, attr.location);
+    }
+  }
+  
+  Program.prototype.initUniform = function (name) {
+    if (this.glProgram != null) {
+      gl.useProgram(this.glProgram);
+      var uni = this.uniforms[name];
+      uni.location = gl.getUniformLocation(this.glProgram, name);
+      console.log('addUniform', name, uni.location);
     }
   }
 
@@ -65,10 +73,7 @@ var Program;
       offset: 0,
       buffer: null
     }
-    if (this.glProgram != null) {
-      attr.location = gl.getAttribLocation(this.glProgram, name);
-      console.log('addAttribute', name, attr.location);
-    }
+    this.initAttribute(name);
   }
 
   Program.prototype.setAttributeBuffer = function (name, buffer) {
@@ -76,6 +81,54 @@ var Program;
     attr.buffer = buffer;
   }
 
+  Program.prototype.loadAttributes = function () {
+    for (var k in this.attributes) {
+      var attr = this.attributes[k];
+      gl.bindBuffer(gl.ARRAY_BUFFER, attr.buffer.glBuffer);
+      gl.vertexAttribPointer(attr.location, attr.size, attr.type, false, attr.stride, attr.offset);
+      gl.enableVertexAttribArray(attr.location);
+    }
+  }
+
+  Program.prototype.addUniform = function (name, type, value) {
+    var uni = this.uniforms[name] = {
+      name: name,
+      location: -1,
+      type: type || 'f',
+      value: value || null
+    }
+    this.initAttribute(name);
+  }
+  
+  Program.prototype.setUniform = function (name, value) {
+    var uni = this.uniforms[name];
+    uni.value = value;
+  }
+  
+  Program.prototype.loadUniforms = function () {
+    for (var name in this.uniforms) {
+      var uni = this.uniforms[name];
+
+      switch (uni.type) {
+        case 'i':
+          gl.uniform1i(uni.location, uni.value);
+        break; case 'f':
+          gl.uniform1f(uni.location, uni.value);
+        break; case 'v2':
+          gl.uniform2f(uni.location, uni.value[0], uni.value[1]);
+        break; case 'v3':
+          gl.uniform3f(uni.location, uni.value[0], uni.value[1], uni.value[2]);
+        break; case 'v4':
+          gl.uniform4f(uni.location, uni.value[0], uni.value[1], uni.value[2], uni.value[3]);
+        break; case 'm4':
+  				gl.uniformMatrix4fv(uni.location, false, uni.value);
+        break; case 't':
+          gl.uniform1i(uni.location, uni.value);
+        break;
+      }
+    }
+  }
+  
   Program.prototype.setRenderTarget = function (renderTarget, setViewport) {
     this.renderTarget = renderTarget;
     this.framebuffer = (renderTarget && renderTarget.framebuffer) || null;
@@ -96,14 +149,9 @@ var Program;
   
     var vp = this.viewport;
     gl.viewport(vp.x, vp.y, vp.w, vp.h);
-  
-    for (var k in this.attributes) {
-      var attr = this.attributes[k];
-      gl.bindBuffer(gl.ARRAY_BUFFER, attr.buffer.glBuffer);
-      gl.vertexAttribPointer(attr.location, attr.size, attr.type, false, attr.stride, attr.offset);
-      gl.enableVertexAttribArray(attr.location);
-    }
-  
+    
+    this.loadUniforms();
+    this.loadAttributes();
     gl.drawArrays(this.drawMode, first, count);
   }
 }());
