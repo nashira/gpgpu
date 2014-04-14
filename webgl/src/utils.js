@@ -3,6 +3,21 @@ var Utils, Matrix;
 (function () {
   Utils = {};
   
+  Utils.getTextureIndecies = function (width, height) {
+    var data = [];
+    var dw = 1 / width;
+    var dh = 1 / height;
+    for (var i = dh * 0.5; i < 1; i += dh) {
+      for (var j = dw * 0.5; j < 1; j += dw) {
+        data.push(i, j);
+      }
+    }
+    // console.log('getTextureIndecies', data);
+    var db = new DataBuffer(2, width * height);
+    db.setBuffer(new Float32Array(data));
+    return db;
+  }
+  
   Matrix = {
     // taken from html5rocks.com
     makePerspective: function(fieldOfViewInRadians, aspect, near, far) {

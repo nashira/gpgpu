@@ -1,6 +1,8 @@
 var Texture;
 
 (function () {
+  var gl;
+  
   Texture = function (width, height, params) {
     params = params || {};
     this.width = width;
@@ -14,6 +16,10 @@ var Texture;
     this.glTexture = params.glTexture || null;
   }
   
+  Texture.init = function (_gl) {
+    gl = _gl;
+  }
+  
   Texture.prototype.init = function () {
     this.glTexture = gl.createTexture();
     this.applyParameters();
@@ -21,14 +27,17 @@ var Texture;
   }
   
   Texture.prototype.applyParameters = function () {
-    gl.bindTexture(gl.TEXTURE_2D, this.glTexture)
+    gl.bindTexture(gl.TEXTURE_2D, this.glTexture);
   	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, this.wrapS);
   	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, this.wrapT);
   	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, this.magFilter);
   	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, this.minFilter);
+    gl.bindTexture(gl.TEXTURE_2D, null);
   }
   
   Texture.prototype.setData = function (data) {
+    gl.bindTexture(gl.TEXTURE_2D, this.glTexture)
     gl.texImage2D(gl.TEXTURE_2D, 0, this.format, this.width, this.height, 0, this.format, this.type, data);
+    gl.bindTexture(gl.TEXTURE_2D, null);
   }
 }());

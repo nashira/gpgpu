@@ -21,6 +21,7 @@
 <body>
   <canvas id="canvas" width="500" height="500"></canvas>
 
+  <script src='lib/stats.min.js'></script>
   <script src='../src/program.js'></script>
   <script src='../src/databuffer.js'></script>
   <script src='../src/rendertarget.js'></script>
@@ -28,12 +29,20 @@
   <script src='../src/shaderlib.js'></script>
 
   <script>
+  
+  	var stats = new Stats();
+  	stats.domElement.style.position = 'absolute';
+  	stats.domElement.style.left = '0px';
+  	stats.domElement.style.top = '0px';
+  	document.body.appendChild(stats.domElement);
+  
     var canvas = document.getElementById('canvas');
     var devicePixelRatio = window.devicePixelRatio || 1;
     canvas.width = window.innerWidth * devicePixelRatio;
     canvas.height = window.innerHeight * devicePixelRatio;
     canvas.style.width = canvas.style.height = '100%';
     var gl = canvas.getContext('webgl');
+    Program.init(gl);
 
     var vertexShader = [
       'precision highp float;',
@@ -50,15 +59,17 @@
 
     var fragmentShader = [
       'precision highp float;',
+      'uniform float time;',
       'varying vec3 vColor;',
       'varying vec2 vPos;',
-      ShaderLib.noise2d,
+      ShaderLib.noise3d,
       'float fn() {',
-      '  return snoise(vPos * 4.) + snoise(vPos * 8.) * 0.5 + snoise(vPos * 16.) * 0.25 + snoise(vPos * 32.) * 0.125;',
+      '  return snoise(vec3(vPos * 4., time)) + snoise(vec3(vPos * 8., time)) * 0.5 + snoise(vec3(vPos * 16., time)) * 0.25 + snoise(vec3(vPos * 32., time)) * 0.125;',
       '}',
       'void main() {',
       '  float n = fn();',
       '  gl_FragColor = vec4(vColor * (n * 0.5 + 0.5), 1.);',
+      // '  gl_FragColor = vec4(vColor * (snoise(vec3(vPos * 10., time)) * .5 + .5), 1.);',
       // '  gl_FragColor = vec4(vec3(n * 0.5 + 0.5), 1.);',
       '}'
       ].join('\n');
@@ -76,6 +87,7 @@
 
     program.addAttribute('color', 3, gl.FLOAT);
     program.setAttributeBuffer('color', color);
+    program.addUniform('time', 'f', 0);
     
     program.setIndecies([0,1,2,0,2,3]);
 
@@ -115,9 +127,17 @@
     program2.setIndecies([0,1,2,0,2,3]);
     program2.setViewport((window.innerWidth - window.innerHeight), 0, window.innerHeight * 2, window.innerHeight * 2);
 
-    program.draw(0, 6);
     // program2.drawMode = gl.PARTICLES;
-    program2.draw(0, 6);
+    var time = 0;
+    function animate() {
+      time += 0.005;
+      program.setUniform('time', time);
+      program.draw(0, 6);
+      program2.draw(0, 6);
+      requestAnimationFrame(animate);
+			stats.update();
+    }
+    animate();
     
   </script>
 

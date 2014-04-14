@@ -1,5 +1,7 @@
 var Program;
 (function () {
+  var gl;
+  
   Program = function (vertexShader, fragmentShader, params) {
     params = params || {};
     this.attributes = {};
@@ -9,17 +11,29 @@ var Program;
     this.framebuffer = null;
     this.renderbuffer = null;
     this.indexBuffer = null;
+    this.textureCount = 0;
     this.viewport = params.viewport || {x: 0, y: 0, w: 1, h: 1};
     this.blendEnabled = params.blendEnabled || false;
     this.blendEquation = params.blendEquation || gl.FUNC_ADD;
     this.blendFunc = params.blendFunc || [gl.SRC_ALPHA, gl.ONE];
-    this.drawMode = params.drawMode || gl.TRIANGLES;
+    this.drawMode = 'drawMode' in params ? params.drawMode : gl.TRIANGLES;
     // this.drawFirst = 0;
     // this.drawCount = 0;
   
     if (vertexShader && fragmentShader) {
       this.buildProgram(vertexShader, fragmentShader);
     }
+  }
+
+  Program.init = function (_gl) {
+    gl = _gl;
+    DataBuffer.init(gl);
+    RenderTarget.init(gl);
+    Texture.init(gl);
+    
+		gl.getExtension('OES_texture_float');
+		gl.getExtension('OES_texture_float_linear');
+		gl.getExtension('OES_standard_derivatives');
   }
 
   Program.prototype.buildProgram = function (vertexShader, fragmentShader) {
@@ -53,7 +67,7 @@ var Program;
   
   Program.prototype.initAttribute = function (name) {
     if (this.glProgram != null) {
-      gl.useProgram(this.glProgram);
+      // gl.useProgram(this.glProgram);
       var attr = this.attributes[name];
       attr.location = gl.getAttribLocation(this.glProgram, name);
       console.log('initAttribute', name, attr.location);
@@ -62,10 +76,10 @@ var Program;
   
   Program.prototype.initUniform = function (name) {
     if (this.glProgram != null) {
-      gl.useProgram(this.glProgram);
+      // gl.useProgram(this.glProgram);
       var uni = this.uniforms[name];
       uni.location = gl.getUniformLocation(this.glProgram, name);
-      console.log('addUniform', name, uni.location);
+      console.log('initUniform', name, uni.location);
     }
   }
 
@@ -85,6 +99,9 @@ var Program;
   Program.prototype.setAttributeBuffer = function (name, buffer) {
     var attr = this.attributes[name];
     attr.buffer = buffer;
+    // gl.bindBuffer(gl.ARRAY_BUFFER, attr.buffer.glBuffer);
+    // gl.vertexAttribPointer(attr.location, attr.size, attr.type, false, attr.stride, attr.offset);
+    // gl.bindBuffer(gl.ARRAY_BUFFER, null);
   }
 
   Program.prototype.loadAttributes = function () {
@@ -93,6 +110,7 @@ var Program;
       gl.bindBuffer(gl.ARRAY_BUFFER, attr.buffer.glBuffer);
       gl.vertexAttribPointer(attr.location, attr.size, attr.type, false, attr.stride, attr.offset);
       gl.enableVertexAttribArray(attr.location);
+      gl.bindBuffer(gl.ARRAY_BUFFER, null);
     }
   }
 
@@ -114,11 +132,11 @@ var Program;
   }
   
   Program.prototype.setUniform = function (name, value) {
-    var uni = this.uniforms[name];
-    uni.value = value;
+    this.uniforms[name].value = value;
   }
   
   Program.prototype.loadUniforms = function () {
+    var textureCount = 0;
     for (var name in this.uniforms) {
       var uni = this.uniforms[name];
 
@@ -136,10 +154,26 @@ var Program;
         break; case 'm4':
   				gl.uniformMatrix4fv(uni.location, false, uni.value);
         break; case 't':
-          gl.uniform1i(uni.location, uni.value);
+          var unit = textureCount++;
+          gl.activeTexture(gl.TEXTURE0 + unit);
+          gl.bindTexture(gl.TEXTURE_2D, uni.value);
+          gl.uniform1i(uni.location, unit);
         break;
       }
     }
+  }
+  
+  Program.prototype.unloadUniforms = function () {
+    // this.textureCount--;
+    // for (var name in this.uniforms) {
+    //   var uni = this.uniforms[name];
+    // 
+    //   switch (uni.type) {
+    //   case 't':
+    //       // gl.bindTexture(gl.TEXTURE_2D + this.textureCount--, null);
+    //     break;
+    //   }
+    // }
   }
   
   Program.prototype.setIndecies = function (array) {
@@ -167,8 +201,11 @@ var Program;
 
   Program.prototype.draw = function (first, count) {
     gl.useProgram(this.glProgram);
-    gl.bindFramebuffer(gl.FRAMEBUFFER, this.framebuffer);
-    gl.bindRenderbuffer(gl.RENDERBUFFER, this.renderbuffer);
+    if (Program.framebuffer !== this.framebuffer) {
+      Program.framebuffer = this.framebuffer;
+      gl.bindFramebuffer(gl.FRAMEBUFFER, this.framebuffer);
+      // gl.bindRenderbuffer(gl.RENDERBUFFER, this.renderbuffer);
+    }
     
     if (this.blendEnabled) {
       gl.enable(gl.BLEND);
@@ -188,17 +225,19 @@ var Program;
   
     var vp = this.viewport;
     gl.viewport(vp.x, vp.y, vp.w, vp.h);
-    
-    this.loadUniforms();
+
     this.loadAttributes();
+    this.loadUniforms();
     
     if (this.indexBuffer != null) {
       gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
       gl.drawElements(this.drawMode, count, gl.UNSIGNED_SHORT, first * 2);
+      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
     } else {
       gl.drawArrays(this.drawMode, first, count);
     }
 
     this.unloadAttributes();
+    this.unloadUniforms();
   }
 }());

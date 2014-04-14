@@ -21,6 +21,7 @@
 <body>
   <canvas id="canvas" width="500" height="500"></canvas>
 
+  <script src='lib/stats.min.js'></script>
   <script src='../src/program.js'></script>
   <script src='../src/databuffer.js'></script>
   <script src='../src/rendertarget.js'></script>
@@ -29,6 +30,11 @@
   <script src='../src/utils.js'></script>
 
   <script>
+  	var stats = new Stats();
+  	stats.domElement.style.position = 'absolute';
+  	stats.domElement.style.left = '0px';
+  	stats.domElement.style.top = '0px';
+  	document.body.appendChild(stats.domElement);
     var canvas = document.getElementById('canvas');
     var devicePixelRatio = window.devicePixelRatio || 1;
     var width = window.innerWidth;
@@ -37,6 +43,7 @@
     canvas.height = height * devicePixelRatio;
     canvas.style.width = canvas.style.height = '100%';
     var gl = canvas.getContext('webgl');
+    Program.init(gl);
 
     var vertexShader = [
       'precision highp float;',
@@ -69,7 +76,7 @@
     
     program.setViewport(0, 0, width * 2, height * 2);
     program.blendEnabled = true;
-    program.drawMode = gl.PARTICLES;
+    program.drawMode = gl.POINTS;
     
     var angle = 0;
     var rm = Matrix.makeYRotation(angle);
@@ -78,6 +85,7 @@
     var pm = Matrix.makePerspective(1, width / height, 0, 1000);
     
     program.setUniform('pMatrix', pm);
+    var time = 0;
     function animate() {
       angle += 0.003;
       Matrix.setYRotation(rm, angle);
@@ -87,15 +95,16 @@
       program.draw(0, 1000);
       
       requestAnimationFrame(animate);
+      stats.update();
     }
     animate();
     
     function getGrid(size) {
       var s2 = size / 2;
       var verts = [];
-      for (var i = -s2; i < s2; i++) {
-        for (var j = -s2; j < s2; j++) {
-          for (var k = -s2; k < s2; k++) {
+      for (var i = -s2 + 0.5; i < s2; i++) {
+        for (var j = -s2 + 0.5; j < s2; j++) {
+          for (var k = -s2 + 0.5; k < s2; k++) {
             verts.push(i, j, k);
           }
         }

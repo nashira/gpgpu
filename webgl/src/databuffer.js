@@ -1,9 +1,14 @@
 var DataBuffer;
 (function () {
+  var gl;
   DataBuffer = function (itemSize, numItems) {
     this.glBuffer = gl.createBuffer();
     this.itemSize = itemSize;
     this.numItems = numItems;
+  }
+  
+  DataBuffer.init = function (_gl) {
+    gl = _gl;
   }
 
   DataBuffer.prototype.setBuffer = function (arrayBuffer) {
