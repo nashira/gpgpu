@@ -35,9 +35,17 @@ var Texture;
     gl.bindTexture(gl.TEXTURE_2D, null);
   }
   
+  Texture.prototype.setImage = function (image) {
+    gl.bindTexture(gl.TEXTURE_2D, this.glTexture)
+    gl.texImage2D(gl.TEXTURE_2D, 0, this.format, this.format, this.type, image);
+    gl.generateMipmap(gl.TEXTURE_2D);
+    gl.bindTexture(gl.TEXTURE_2D, null);
+  }
+  
   Texture.prototype.setData = function (data) {
     gl.bindTexture(gl.TEXTURE_2D, this.glTexture)
     gl.texImage2D(gl.TEXTURE_2D, 0, this.format, this.width, this.height, 0, this.format, this.type, data);
+    gl.generateMipmap(gl.TEXTURE_2D);
     gl.bindTexture(gl.TEXTURE_2D, null);
   }
 }());

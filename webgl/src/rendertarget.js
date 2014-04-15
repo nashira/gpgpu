@@ -19,16 +19,16 @@ var RenderTarget;
     this.texture = new Texture(this.width, this.height, params);
     this.texture.init().setData(null);
     this.framebuffer = gl.createFramebuffer();
-    this.renderbuffer = gl.createRenderbuffer();
+    // this.renderbuffer = gl.createRenderbuffer();
 
   	gl.bindFramebuffer(gl.FRAMEBUFFER, this.framebuffer);
   	gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this.texture.glTexture, 0);
   
-    gl.bindRenderbuffer(gl.RENDERBUFFER, this.renderbuffer);
-    gl.renderbufferStorage(gl.RENDERBUFFER, gl.RGBA4, this.width, this.height)
+    // gl.bindRenderbuffer(gl.RENDERBUFFER, this.renderbuffer);
+    // gl.renderbufferStorage(gl.RENDERBUFFER, gl.RGBA4, this.width, this.height)
     
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-    gl.bindRenderbuffer(gl.RENDERBUFFER, null);
+    // gl.bindRenderbuffer(gl.RENDERBUFFER, null);
   }
   
   RenderTarget.prototype.getGlTexture = function () {

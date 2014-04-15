@@ -18,6 +18,14 @@ var Utils, Matrix;
     return db;
   }
   
+  Utils.loadImage = function (url, onLoad) {
+    var cubeImage = new Image();
+    cubeImage.onload = function () {
+      onLoad(cubeImage);
+    };
+    cubeImage.src = url;
+  }
+  
   Matrix = {
     // taken from html5rocks.com
     makePerspective: function(fieldOfViewInRadians, aspect, near, far) {
@@ -135,7 +143,7 @@ var Utils, Matrix;
     },
     
     multiply: function () {
-      var m = arguments[0], t = [];
+      var m = arguments[1], t = arguments[0];
       for (var i = 1; i < arguments.length; i++) {
         Matrix.multiplyMatrix(m, arguments[i], t);
         m = t;

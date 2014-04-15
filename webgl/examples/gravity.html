@@ -69,7 +69,13 @@
       // '    }',
       // '  }',
       '  vec3 nPos = texture2D(pos, vUv).xyz;',
-      '  gl_FragColor = vec4(nPos + .01, 1.);',
+      // '  gl_FragColor = vec4(nPos + vec3(sin(nPos.y), cos(nPos.z), sin(nPos.x)), 1.);',
+      // '  if (length(nPos) > 2.) {',
+      // '    vec3 p = mix(nPos.xyz, nPos.zxy, 0.1);',
+      '    gl_FragColor = vec4(nPos - (nPos * 0.0005), 1.);',
+      // '  } else {',
+      // '    gl_FragColor = vec4(p, 1.);',
+      // '  }',
       '}'
       ].join('\n');
 
@@ -77,16 +83,18 @@
     var position = new DataBuffer(2, 4);
     position.setBuffer(new Float32Array([0,1,0,0,1,0,1,1]));
     
-    var rt1 = new RenderTarget(32, 32, {type: gl.FLOAT});
-    var rt2 = new RenderTarget(32, 32, {type: gl.FLOAT});
+    var dim = 128;
+    var num = dim * dim;
+    var rt1 = new RenderTarget(dim, dim, {type: gl.FLOAT});
+    var rt2 = new RenderTarget(dim, dim, {type: gl.FLOAT});
     gravProgram.setIndecies([0,1,2,0,2,3]);
     gravProgram.addUniform('pos', 't', rt1.getGlTexture());
     gravProgram.setRenderTarget(rt2, true);
     gravProgram.addAttribute('position', 2, gl.FLOAT);
     gravProgram.setAttributeBuffer('position', position);
     
-    var data = new Float32Array(1024*4);
-    for (var i = 0; i < 1024*4; i++) data[i] = Math.random() * 2 - 1;
+    var data = new Float32Array(num*4);
+    for (var i = 0; i < num*4; i++) data[i] = Math.random() * 2 - 1;
     rt1.texture.setData(data);
 
     var vertexShader2 = [
@@ -94,53 +102,79 @@
       'attribute vec2 coords;',
       'uniform sampler2D pos;',
       'uniform mat4 matrix;',
+
+      ShaderLib.noise3d,
       
       'void main() {',
-      '  gl_PointSize = 10.;',
-      '  gl_Position = matrix * vec4(texture2D(pos, coords).xyz, 1.);',
-      // '  gl_Position = vec4(texture2D(pos, coords).xyz, 1.);',
+      '  gl_PointSize = 20.;',
+      '  vec3 op = texture2D(pos, coords).xyz;', 
+      '  vec3 p = vec3(snoise(op), snoise(op.yzx), snoise(op.zxy));',
+      '  gl_Position = matrix * vec4(p, 1.);',
       '}'
       ].join('\n');
     
     var fragmentShader2 = [
       'precision highp float;',
+      'uniform sampler2D particleTex;',
       'void main() {',
-      '  gl_FragColor = vec4(1.);',
+      '  vec3 color = texture2D(particleTex, gl_PointCoord).xyz;',
+      '  gl_FragColor = vec4(color, 1.);',
       '}'
       ].join('\n');
     
-    var program2 = new Program(vertexShader2, fragmentShader2, {drawMode: gl.POINTS});
+    var particleTex = new Texture(64, 64, {magFilter: gl.LINEAR, minFilter: gl.LINEAR_MIPMAP_NEAREST});
+    // var particleTex = new Texture(64, 64);
+    particleTex.init();
+    Utils.loadImage('lib/ring.png', function (img) {
+      console.log('loadImage', img.width, img.height)
+      particleTex.setImage(img);
+      // particleTex.applyParameters();
+      animate();
+    });
+    console.log('**************particleTex', particleTex.glTexture)
     
-    program2.addUniform('matrix', 'm4', Matrix.makePerspective(1, width / height, 0, 1000));
+    var program2 = new Program(vertexShader2, fragmentShader2, {drawMode: gl.POINTS, blendEnabled: true});
+    program2.addUniform('matrix', 'm4');
+    program2.addUniform('particleTex', 't', particleTex.glTexture);
     program2.addUniform('pos', 't', rt1.getGlTexture());
     
-    var coords = Utils.getTextureIndecies(32, 32);
+    var coords = Utils.getTextureIndecies(dim, dim);
     program2.addAttribute('coords', 2, gl.FLOAT);
     program2.setAttributeBuffer('coords', coords);
     
     program2.setViewport(0, 0, width * 2, height * 2);
     
-
+    var angle = 0, matrix = [];
+    var rm = Matrix.makeYRotation(angle);
+    // var sm = Matrix.makeScale(0.5, 0.5, 0.5);
+    var tm = Matrix.makeTranslation(0, 0, -2);
+    var pm = Matrix.makePerspective(1, width / height, 0, 1000);
+    
     var flip = false;
     function animate() {
-      if (flip) {
-        gravProgram.setUniform('pos', rt2.getGlTexture());
-        gravProgram.setRenderTarget(rt1);
-        // program2.setUniform('pos', rt1.getGlTexture());
-      } else {
-        gravProgram.setUniform('pos', rt1.getGlTexture());
-        gravProgram.setRenderTarget(rt2);
-        // program2.setUniform('pos', rt2.getGlTexture());
-      }
-      flip = !flip;
-
-      gravProgram.draw(0, 6);
-      program2.draw(0, 1024);
+      // if (flip) {
+      //   gravProgram.setUniform('pos', rt2.getGlTexture());
+      //   gravProgram.setRenderTarget(rt1);
+      //   program2.setUniform('pos', rt1.getGlTexture());
+      // } else {
+      //   gravProgram.setUniform('pos', rt1.getGlTexture());
+      //   gravProgram.setRenderTarget(rt2);
+      //   program2.setUniform('pos', rt2.getGlTexture());
+      // }
+      // flip = !flip;
+      
+      angle += 0.003;
+      Matrix.setYRotation(rm, angle);
+      Matrix.multiply(matrix, rm, tm, pm);
+      program2.setUniform('matrix', matrix);
+      
+      // gravProgram.draw(0, 6);
+      program2.draw(0, num);
       
       requestAnimationFrame(animate);
       stats.update();
     }
-    animate();
+    // animate();
   </script>
 
 </body>

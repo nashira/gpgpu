@@ -99,9 +99,6 @@ var Program;
   Program.prototype.setAttributeBuffer = function (name, buffer) {
     var attr = this.attributes[name];
     attr.buffer = buffer;
-    // gl.bindBuffer(gl.ARRAY_BUFFER, attr.buffer.glBuffer);
-    // gl.vertexAttribPointer(attr.location, attr.size, attr.type, false, attr.stride, attr.offset);
-    // gl.bindBuffer(gl.ARRAY_BUFFER, null);
   }
 
   Program.prototype.loadAttributes = function () {
@@ -110,8 +107,8 @@ var Program;
       gl.bindBuffer(gl.ARRAY_BUFFER, attr.buffer.glBuffer);
       gl.vertexAttribPointer(attr.location, attr.size, attr.type, false, attr.stride, attr.offset);
       gl.enableVertexAttribArray(attr.location);
-      gl.bindBuffer(gl.ARRAY_BUFFER, null);
     }
+    gl.bindBuffer(gl.ARRAY_BUFFER, null);
   }
 
   Program.prototype.unloadAttributes = function () {
@@ -161,19 +158,6 @@ var Program;
         break;
       }
     }
-  }
-  
-  Program.prototype.unloadUniforms = function () {
-    // this.textureCount--;
-    // for (var name in this.uniforms) {
-    //   var uni = this.uniforms[name];
-    // 
-    //   switch (uni.type) {
-    //   case 't':
-    //       // gl.bindTexture(gl.TEXTURE_2D + this.textureCount--, null);
-    //     break;
-    //   }
-    // }
   }
   
   Program.prototype.setIndecies = function (array) {
@@ -238,6 +222,5 @@ var Program;
     }
 
     this.unloadAttributes();
-    this.unloadUniforms();
   }
 }());
