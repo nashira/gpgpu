@@ -1,4 +1,4 @@
-gpew
+oogl
 ====
 
-light-weight, low-level opengl library
+light-weight, low-level, object oriented opengl library
