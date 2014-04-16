@@ -119,17 +119,11 @@
       '}'
       ].join('\n');
     
-    var particleTex = new Texture(64, 64, {magFilter: gl.LINEAR, minFilter: gl.LINEAR_MIPMAP_NEAREST});
-    // var particleTex = new Texture(64, 64);
-    particleTex.init();
-    // particleTex.setData(new Uint8Array([255, 0, 0, 255]));
-    Utils.loadImage('lib/ring.png', function (img) {
-      console.log('loadImage', img.width, img.height)
-      particleTex.setImage(img);
-      // particleTex.applyParameters();
-      animate();
+    var particleTex = new Texture(64, 64, {
+      magFilter: gl.LINEAR,
+      minFilter: gl.LINEAR_MIPMAP_NEAREST,
+      image: 'lib/ring.png'
     });
-    console.log('**************particleTex', particleTex.glTexture)
     
     var program2 = new Program(vertexShader2, fragmentShader2, {drawMode: gl.POINTS, blendEnabled: true});
     program2.addUniform('matrix', 'm4');
@@ -172,7 +166,7 @@
       requestAnimationFrame(animate);
       stats.update();
     }
-    // animate();
+    animate();
   </script>
 
 </body>

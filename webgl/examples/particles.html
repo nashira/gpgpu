@@ -59,13 +59,22 @@
 
     var fragmentShader = [
       'precision highp float;',
+      'uniform sampler2D sprite;',
       'void main() {',
-      '  gl_FragColor = vec4(vec3(1.), .5);',
+      '  vec3 color = vec3(0., 1., 0.);',
+      '  gl_FragColor = vec4(color * texture2D(sprite, gl_PointCoord).xyz, .8);',
       '}'
       ].join('\n');
       
     var program = new Program(vertexShader, fragmentShader);
     var position = new DataBuffer(3, 1000);
+    
+    var particleTex = new Texture(64, 64, {
+      magFilter: gl.LINEAR,
+      minFilter: gl.LINEAR_MIPMAP_NEAREST,
+      image: 'lib/sphere.png'
+    });
+    
     position.setBuffer(new Float32Array(getGrid(10)));
 
     program.addAttribute('position', 3, gl.FLOAT);
@@ -73,6 +82,7 @@
     
     program.addUniform('pMatrix', 'm4');
     program.addUniform('mvMatrix', 'm4');
+    program.addUniform('sprite', 't', particleTex.glTexture);
     
     program.setViewport(0, 0, width * 2, height * 2);
     program.blendEnabled = true;

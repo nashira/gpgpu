@@ -1,7 +1,7 @@
 var Texture;
 
 (function () {
-  var gl;
+  var gl, DEFAULT_TEXTURE_DATA;
   
   Texture = function (width, height, params) {
     params = params || {};
@@ -14,10 +14,26 @@ var Texture;
     this.format = params.format || gl.RGBA;
     this.type = params.type || gl.UNSIGNED_BYTE;
     this.glTexture = params.glTexture || null;
+    
+    if (params.image) {
+      this.width = 1;
+      this.height = 1;
+      this.init();
+      this.setData(DEFAULT_TEXTURE_DATA);
+      Utils.loadImage('lib/sphere.png', function (img) {
+        this.width = width;
+        this.height = height;
+        this.setImage(img);
+        if (params.onLoad) {
+          params.onLoad(this, img);
+        }
+      }.bind(this));
+    }
   }
   
   Texture.init = function (_gl) {
     gl = _gl;
+    DEFAULT_TEXTURE_DATA = new Uint8Array([0, 0, 0, 0]);
   }
   
   Texture.prototype.init = function () {
