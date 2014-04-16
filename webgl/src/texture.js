@@ -15,12 +15,12 @@ var Texture;
     this.type = params.type || gl.UNSIGNED_BYTE;
     this.glTexture = params.glTexture || null;
     
-    if (params.image) {
+    if (params.image && typeof(params.image) == 'string') {
       this.width = 1;
       this.height = 1;
       this.init();
       this.setData(DEFAULT_TEXTURE_DATA);
-      Utils.loadImage('lib/sphere.png', function (img) {
+      Utils.loadImage(params.image, function (img) {
         this.width = width;
         this.height = height;
         this.setImage(img);
@@ -28,6 +28,12 @@ var Texture;
           params.onLoad(this, img);
         }
       }.bind(this));
+    } else if (params.image) {
+      this.init();
+      this.setImage(params.image);
+    } else if (params.data) {
+      this.init();
+      this.setData(params.data);
     }
   }
   

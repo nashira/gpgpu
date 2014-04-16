@@ -81,7 +81,7 @@
 
     var gravProgram = new Program(gravVert, gravFrag);
     var position = new DataBuffer(2, 4);
-    position.setBuffer(new Float32Array([0,1,0,0,1,0,1,1]));
+    position.setData(new Float32Array([0,1,0,0,1,0,1,1]));
     
     var dim = 128;
     var num = dim * dim;
@@ -91,7 +91,7 @@
     gravProgram.addUniform('pos', 't', rt1.getGlTexture());
     gravProgram.setRenderTarget(rt2, true);
     gravProgram.addAttribute('position', 2, gl.FLOAT);
-    gravProgram.setAttributeBuffer('position', position);
+    gravProgram.setAttribute('position', position);
     
     var data = new Float32Array(num*4);
     for (var i = 0; i < num*4; i++) data[i] = Math.random() * 2 - 1;
@@ -132,7 +132,7 @@
     
     var coords = Utils.getTextureIndecies(dim, dim);
     program2.addAttribute('coords', 2, gl.FLOAT);
-    program2.setAttributeBuffer('coords', coords);
+    program2.setAttribute('coords', coords);
     
     program2.setViewport(0, 0, width * 2, height * 2);
     

@@ -47,12 +47,15 @@
 
     var vertexShader = [
       'precision highp float;',
-      'attribute vec3 position;',
       'uniform mat4 mvMatrix;',
       'uniform mat4 pMatrix;',
+      'attribute vec3 position;',
+      'attribute vec3 color;',
+      'varying vec3 vColor;',
       'void main() {',
+      '  vColor = color;',
       '  vec4 mvPos = mvMatrix * vec4(position, 1.);',
-      '  gl_PointSize = 10. * (10. / length(mvPos.xyz));',
+      '  gl_PointSize = 20. * (10. / length(mvPos.xyz));',
       '  gl_Position = pMatrix * mvPos;',
       '}'
       ].join('\n');
@@ -60,33 +63,35 @@
     var fragmentShader = [
       'precision highp float;',
       'uniform sampler2D sprite;',
+      'varying vec3 vColor;',
       'void main() {',
-      '  vec3 color = vec3(0., 1., 0.);',
-      '  gl_FragColor = vec4(color * texture2D(sprite, gl_PointCoord).xyz, .8);',
+      '  gl_FragColor = vec4(vColor * texture2D(sprite, gl_PointCoord).xyz, .8);',
       '}'
       ].join('\n');
       
-    var program = new Program(vertexShader, fragmentShader);
-    var position = new DataBuffer(3, 1000);
+    var program = new Program(vertexShader, fragmentShader, {
+      blendEnabled: true,
+      drawMode: gl.POINTS,
+      viewport: {x: 0, y: 0, w: width * 2, h: height * 2}
+    });
+    
+    var position = new DataBuffer(3, 1000, new Float32Array(getGrid(10)));
+    var color = new DataBuffer(3, 1000);
+    var ca = []; for (var i = 0; i < 3000; i++) ca.push(Math.random());
+    color.setData(new Float32Array(ca));
     
     var particleTex = new Texture(64, 64, {
       magFilter: gl.LINEAR,
       minFilter: gl.LINEAR_MIPMAP_NEAREST,
-      image: 'lib/sphere.png'
+      image: 'lib/star.png'
     });
-    
-    position.setBuffer(new Float32Array(getGrid(10)));
 
-    program.addAttribute('position', 3, gl.FLOAT);
-    program.setAttributeBuffer('position', position);
+    program.addAttribute('position', 3, gl.FLOAT, position);
+    program.addAttribute('color', 3, gl.FLOAT, color);
     
     program.addUniform('pMatrix', 'm4');
     program.addUniform('mvMatrix', 'm4');
     program.addUniform('sprite', 't', particleTex.glTexture);
-    
-    program.setViewport(0, 0, width * 2, height * 2);
-    program.blendEnabled = true;
-    program.drawMode = gl.POINTS;
     
     var angle = 0, m =[];
     var rm = Matrix.makeYRotation(angle);
@@ -95,9 +100,9 @@
     var pm = Matrix.makePerspective(1, width / height, 0, 1000);
     
     program.setUniform('pMatrix', pm);
-    var time = 0;
+    
     function animate() {
-      angle += 0.003;
+      angle += 0.001;
       Matrix.setYRotation(rm, angle);
       Matrix.multiply(m, rm, tm);
 

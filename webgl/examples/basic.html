@@ -69,18 +69,18 @@
       ].join('\n');
 
     var position = new DataBuffer(2, 4);
-    position.setBuffer(new Float32Array([0,1,0,0,1,0,1,1]));
+    position.setData(new Float32Array([0,1,0,0,1,0,1,1]));
 
     var color = new DataBuffer(3, 4);
     var ca = []; for(var i = 0; i < 12; i++) ca.push(Math.random());
-    color.setBuffer(new Float32Array(ca));
+    color.setData(new Float32Array(ca));
 
     var program = new Program(vertextShader, fragmentShader);
     program.addAttribute('position', 2, gl.FLOAT);
-    program.setAttributeBuffer('position', position);
+    program.setAttribute('position', position);
 
     program.addAttribute('color', 3, gl.FLOAT);
-    program.setAttributeBuffer('color', color);
+    program.setAttribute('color', color);
     
     program.setIndecies([0,1,2,0,2,3]);
     

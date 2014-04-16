@@ -75,18 +75,18 @@
       ].join('\n');
 
     var position = new DataBuffer(2, 4);
-    position.setBuffer(new Float32Array([0,1,0,0,1,0,1,1]));
+    position.setData(new Float32Array([0,1,0,0,1,0,1,1]));
 
     var color = new DataBuffer(3, 4);
     var ca = []; for(var i = 0; i < 12; i++) ca.push(Math.random());
-    color.setBuffer(new Float32Array(ca));
+    color.setData(new Float32Array(ca));
 
     var program = new Program(vertexShader, fragmentShader);
     program.addAttribute('position', 2, gl.FLOAT);
-    program.setAttributeBuffer('position', position);
+    program.setAttribute('position', position);
 
     program.addAttribute('color', 3, gl.FLOAT);
-    program.setAttributeBuffer('color', color);
+    program.setAttribute('color', color);
     program.addUniform('time', 'f', 0);
     
     program.setIndecies([0,1,2,0,2,3]);
@@ -117,7 +117,7 @@
     var program2 = new Program(vertexShader2, fragmentShader2);
 
     program2.addAttribute('position', 2, gl.FLOAT);
-    program2.setAttributeBuffer('position', position);
+    program2.setAttribute('position', position);
     
     var texture = new Texture(renderTarget.width, renderTarget.height, {magFilter: gl.LINEAR, minFilter: gl.LINEAR});
     texture.glTexture = renderTarget.getGlTexture();
@@ -127,7 +127,6 @@
     program2.setIndecies([0,1,2,0,2,3]);
     program2.setViewport((window.innerWidth - window.innerHeight), 0, window.innerHeight * 2, window.innerHeight * 2);
 
-    // program2.drawMode = gl.PARTICLES;
     var time = 0;
     function animate() {
       time += 0.005;

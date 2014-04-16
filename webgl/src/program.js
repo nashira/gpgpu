@@ -83,7 +83,7 @@ var Program;
     }
   }
 
-  Program.prototype.addAttribute = function (name, size, type) {
+  Program.prototype.addAttribute = function (name, size, type, buffer) {
     var attr = this.attributes[name] = {
       name: name,
       location: -1,
@@ -91,12 +91,12 @@ var Program;
       type: type || gl.FLOAT,
       stride: 0,
       offset: 0,
-      buffer: null
+      buffer: buffer || null
     }
     this.initAttribute(name);
   }
 
-  Program.prototype.setAttributeBuffer = function (name, buffer) {
+  Program.prototype.setAttribute = function (name, buffer) {
     var attr = this.attributes[name];
     attr.buffer = buffer;
   }
