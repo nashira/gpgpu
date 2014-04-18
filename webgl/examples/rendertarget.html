@@ -119,11 +119,11 @@
     program2.addAttribute('position', 2, gl.FLOAT);
     program2.setAttribute('position', position);
     
-    var texture = new Texture(renderTarget.width, renderTarget.height, {magFilter: gl.LINEAR, minFilter: gl.LINEAR});
-    texture.glTexture = renderTarget.getGlTexture();
-    texture.applyParameters();
+    var s = 256;
+    // ca = []; for(var i = 0; i < s * s * 4; i++) ca.push(Math.random() + 0.4);
+    var texture = new Texture(s, s, {type: gl.FLOAT, glTexture: renderTarget.getGlTexture()});
     
-    program2.addUniform('colorTexture', 't', renderTarget.getGlTexture());
+    program2.addUniform('colorTexture', 't', texture.glTexture);
     program2.setIndecies([0,1,2,0,2,3]);
     program2.setViewport((window.innerWidth - window.innerHeight), 0, window.innerHeight * 2, window.innerHeight * 2);
 

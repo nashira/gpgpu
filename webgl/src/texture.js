@@ -34,12 +34,18 @@ var Texture;
     } else if (params.data) {
       this.init();
       this.setData(params.data);
+    } else if (this.glTexture) {
+      this.applyParameters();
     }
   }
   
   Texture.init = function (_gl) {
     gl = _gl;
     DEFAULT_TEXTURE_DATA = new Uint8Array([0, 0, 0, 0]);
+  }
+  
+  Texture.isPower2 = function (value) {
+    return (value & (value - 1)) == 0 && value != 0;
   }
   
   Texture.prototype.init = function () {
@@ -60,14 +66,18 @@ var Texture;
   Texture.prototype.setImage = function (image) {
     gl.bindTexture(gl.TEXTURE_2D, this.glTexture)
     gl.texImage2D(gl.TEXTURE_2D, 0, this.format, this.format, this.type, image);
-    gl.generateMipmap(gl.TEXTURE_2D);
+    if (Texture.isPower2(this.width) && Texture.isPower2(this.height)) {
+      gl.generateMipmap(gl.TEXTURE_2D);
+    }
     gl.bindTexture(gl.TEXTURE_2D, null);
   }
   
   Texture.prototype.setData = function (data) {
     gl.bindTexture(gl.TEXTURE_2D, this.glTexture)
     gl.texImage2D(gl.TEXTURE_2D, 0, this.format, this.width, this.height, 0, this.format, this.type, data);
-    gl.generateMipmap(gl.TEXTURE_2D);
+    if (Texture.isPower2(this.width) && Texture.isPower2(this.height)) {
+      gl.generateMipmap(gl.TEXTURE_2D);
+    }
     gl.bindTexture(gl.TEXTURE_2D, null);
   }
 }());

@@ -164,8 +164,12 @@ var Program;
     this.useIndecies = true;
     this.indexBuffer = gl.createBuffer();
     
+    if (array instanceof Array) {
+      array = new Uint16Array(array);
+    }
+    
 		gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
-		gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(array), gl.STATIC_DRAW);
+		gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, array, gl.STATIC_DRAW);
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
   }
   

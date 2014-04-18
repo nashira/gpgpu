@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+  <title>webgl</title>
+  <meta charset='utf-8'>
+  <meta name='viewport' content='width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0'>
+  <style>
+  body {
+    background-color: #000000;
+    margin: 0px;
+    overflow: hidden;
+    font-family:Monospace;
+    font-size:13px;
+    text-align:center;
+    font-weight: bold;
+    text-align:center;
+  }
+
+  </style>
+</head>
+<body>
+  <canvas id="canvas" width="500" height="500"></canvas>
+
+  <script src='lib/stats.min.js'></script>
+  <script src='../src/program.js'></script>
+  <script src='../src/databuffer.js'></script>
+  <script src='../src/rendertarget.js'></script>
+  <script src='../src/texture.js'></script>
+  <script src='../src/shaderlib.js'></script>
+  <script src='../src/utils.js'></script>
+
+  <script>
+  	var stats = new Stats();
+  	stats.domElement.style.position = 'absolute';
+  	stats.domElement.style.left = '0px';
+  	stats.domElement.style.top = '0px';
+  	document.body.appendChild(stats.domElement);
+    var canvas = document.getElementById('canvas');
+    var devicePixelRatio = window.devicePixelRatio || 1;
+    var width = window.innerWidth;
+    var height = window.innerHeight;
+    canvas.width = width * devicePixelRatio;
+    canvas.height = height * devicePixelRatio;
+    canvas.style.width = canvas.style.height = '100%';
+    var gl = canvas.getContext('webgl');
+    Program.init(gl);
+    
+    var vertexShader = [
+      'precision mediump float;',
+      'attribute vec2 coords;',
+      'varying vec2 vUv;',
+      'void main() {',
+      '  vUv = coords;',
+      '  gl_Position = vec4(coords * 2. - 1., 0., 1.);',
+      '}'
+      ].join('\n');
+
+    var fragmentShader = [
+      'precision mediump float;',
+      'uniform sampler2D tPosition;',
+      'uniform sampler2D tOldPosition;',
+      'varying vec2 vUv;',
+      'uniform float d_width;',
+      'uniform float d_height;',
+      'void main() {',
+      '  vec3 position = texture2D(tPosition, vUv).xyz;',
+      '  vec3 oldPosition = texture2D(tOldPosition, vUv).xyz;',
+      '  vec3 pos = position + (position - oldPosition);',
+      '  float l = length(pos);',
+      '  if (l > 100.) { pos = pos * 100. / l; }',
+      // '  if (l > 100.) { pos = vec3(0.); }',
+      // '  vec3 p = clamp(pos, vec3(-100.), vec3(100));',
+      '  gl_FragColor = vec4(pos, 1.);',
+      // '  } else {',
+      // '    gl_FragColor = vec4(p, 1.);',
+      // '  }',
+      '}'
+      ].join('\n');
+
+    var program = new Program(vertexShader, fragmentShader);
+    var coords = new DataBuffer(2, 4, new Float32Array([0,1,0,0,1,0,1,1]));
+
+    program.setIndecies([0,1,2,0,2,3]);
+    program.addUniform('tPosition', 't');
+    program.addUniform('tOldPosition', 't');
+    program.addAttribute('coords', 2, gl.FLOAT, coords);
+    
+    var dim = 128;
+    var num = dim * dim;
+    var rt1 = new RenderTarget(dim, dim, {type: gl.FLOAT});
+    var rt2 = new RenderTarget(dim, dim, {type: gl.FLOAT});
+    var rt3 = new RenderTarget(dim, dim, {type: gl.FLOAT});
+    
+    var data = new Float32Array(num*4);
+    for (var i = 0; i < num*4; i++) data[i] = Math.random() * 2 - 1;
+    rt1.texture.setData(data);
+    
+    data = new Float32Array(num*4);
+    for (var i = 0; i < num*4; i++) data[i] = Math.random() * 2 - 1;
+    rt2.texture.setData(data);
+
+    program.setRenderTarget(rt3, true);
+    
+    var vertexShader2 = [
+      'precision highp float;',
+      'attribute vec2 coords;',
+      'uniform sampler2D pos;',
+      'uniform mat4 matrix;',
+      'void main() {',
+      '  gl_PointSize = 10.;',
+      '  vec3 op = texture2D(pos, coords).xyz;', 
+      // '  vec3 p = vec3(snoise(op), snoise(op.yzx), snoise(op.zxy));',
+      '  gl_Position = matrix * vec4(op, 1.);',
+      '}'
+      ].join('\n');
+    
+    var fragmentShader2 = [
+      'precision highp float;',
+      'uniform sampler2D particleTex;',
+      'void main() {',
+      '  vec3 color = texture2D(particleTex, gl_PointCoord).xyz;',
+      '  gl_FragColor = vec4(color, 1.);',
+      '}'
+      ].join('\n');
+    
+    var particleTex = new Texture(64, 64, {
+      magFilter: gl.LINEAR,
+      minFilter: gl.LINEAR_MIPMAP_NEAREST,
+      image: 'lib/rin.png'
+    });
+    
+    var program2 = new Program(vertexShader2, fragmentShader2, {drawMode: gl.POINTS, blendEnabled: true});
+    program2.addUniform('matrix', 'm4');
+    program2.addUniform('particleTex', 't', particleTex.glTexture);
+    program2.addUniform('pos', 't', rt1.getGlTexture());
+    
+    var coords = Utils.getTextureIndecies(dim, dim);
+    program2.addAttribute('coords', 2, gl.FLOAT, coords);
+    
+    program2.setViewport(0, 0, width * 2, height * 2);
+    
+    var angle = 0, matrix = [];
+    var rm = Matrix.makeYRotation(angle);
+    // var sm = Matrix.makeScale(0.5, 0.5, 0.5);
+    var tm = Matrix.makeTranslation(0, 0, -200);
+    var pm = Matrix.makePerspective(1, width / height, 0, 1000);
+    
+    var flip = 0;
+    function animate() {
+      switch(flip) {
+      case 0:
+        program.setUniform('tOldPosition', rt1.getGlTexture());
+        program.setUniform('tPosition', rt2.getGlTexture());
+        program.setRenderTarget(rt3);
+        program2.setUniform('pos', rt3.getGlTexture());
+        break;
+      case 1:
+        program.setUniform('tOldPosition', rt2.getGlTexture());
+        program.setUniform('tPosition', rt3.getGlTexture());
+        program.setRenderTarget(rt1);
+        program2.setUniform('pos', rt1.getGlTexture());
+        break;
+      case 2:
+        program.setUniform('tOldPosition', rt3.getGlTexture());
+        program.setUniform('tPosition', rt1.getGlTexture());
+        program.setRenderTarget(rt2);
+        program2.setUniform('pos', rt2.getGlTexture());
+        break;
+      }
+      flip = (flip + 1) % 3;
+      
+      angle += 0.003;
+      Matrix.setYRotation(rm, angle);
+      Matrix.multiply(matrix, rm, tm, pm);
+      program2.setUniform('matrix', matrix);
+      
+      program.draw(0, 6);
+      program2.draw(0, num);
+      
+      requestAnimationFrame(animate);
+      stats.update();
+    }
+    animate();
+  </script>
+
+</body>
+</html>
