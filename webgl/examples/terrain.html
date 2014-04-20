@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+  <title>webgl</title>
+  <meta charset='utf-8'>
+  <meta name='viewport' content='width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0'>
+  <style>
+  body {
+    background-color: #000000;
+    margin: 0px;
+    overflow: hidden;
+    font-family:Monospace;
+    font-size:13px;
+    text-align:center;
+    font-weight: bold;
+    text-align:center;
+  }
+  canvas {}
+
+  </style>
+</head>
+<body>
+  <canvas id="canvas"></canvas>
+
+  <script src='lib/stats.min.js'></script>
+  <script src='../src/program.js'></script>
+  <script src='../src/databuffer.js'></script>
+  <script src='../src/rendertarget.js'></script>
+  <script src='../src/texture.js'></script>
+  <script src='../src/utils.js'></script>
+  <script src='../src/shaderlib.js'></script>
+
+  <script>
+  	var stats = new Stats();
+  	stats.domElement.style.position = 'absolute';
+  	stats.domElement.style.left = '0px';
+  	stats.domElement.style.top = '0px';
+  	document.body.appendChild(stats.domElement);
+    var canvas = document.getElementById('canvas');
+    var devicePixelRatio = window.devicePixelRatio || 1;
+    var width = window.innerWidth;
+    var height = window.innerHeight;
+    canvas.width = width * devicePixelRatio;
+    canvas.height = height * devicePixelRatio;
+    canvas.style.width = canvas.style.height = '100%';
+    var gl = canvas.getContext('webgl');
+    Program.init(gl);
+
+    var vertextShader = [
+      'precision highp float;',
+      'attribute vec2 position;',
+      'attribute vec3 color;',
+      'varying vec3 vColor;',
+      // 'varying vec2 vPos;',
+      'uniform mat4 matrix;',
+      ShaderLib.noise2d,
+      'float noise(vec2 pos, float scale, float amp) {',
+      '  float val = abs(snoise(pos * scale) * amp) + 1.;',
+      '  return val * val;',
+      '}',
+      'float fnoise(vec2 pos) {',
+      '  float val = noise(pos, .04, 2.) + noise(pos, .08, 1.) + noise(pos, .16, .5) + noise(pos, .32, .25);',
+      // '  float val = noise(pos, 1.6, .125);',
+      '  return val;',
+      '}',
+      'void main() {',
+      '  vColor = color;',
+      // '  vPos = position;',
+      '  gl_Position = matrix * vec4(position.x, fnoise(position), position.y, 1.);',
+      // '  gl_Position = vec4(position, 0., 1.);',
+      '}'
+      ].join('\n');
+
+    var fragmentShader = [
+      'precision highp float;',
+      'uniform float time;',
+      'varying vec3 vColor;',
+      // 'varying vec2 vPos;',
+      'void main() {',
+      '  gl_FragColor = vec4(1.);',
+      // '  gl_FragColor = vec4(vColor, 1.);',
+      // '  gl_FragColor = vec4(vec3(snoise(vPos * 8.)), 1.);',
+      '}'
+      ].join('\n');
+
+
+    var program = new Program(vertextShader, fragmentShader, {drawMode: gl.LINE_STRIP});
+    buildGeo(128, 128);
+    var num = 128 * 128 * 12;
+    
+    program.addUniform('time', 'f', 0);
+    program.setViewport(0, 0, width * 2, height * 2);
+
+    var rm = Matrix.makeYRotation(0);
+    // var tm = Matrix.makeTranslation(0, -10, -30);
+    var tm = Matrix.makeLookAt([0, 50, 100], [0, 10, 0], [0, 1, 0]);
+    var pm = Matrix.makePerspective(1, width / height, 1, 1000);
+    var matrix = [];
+    Matrix.multiply(matrix, tm, pm);
+    program.addUniform('matrix', 'm4', matrix);
+
+    var time = 0;
+    function animate() {
+      time += 0.001;
+      program.setUniform('time', time);
+
+      Matrix.setYRotation(rm, time);
+      Matrix.multiply(matrix, rm, tm, pm);
+      program.setUniform('matrix', matrix);
+      
+      program.draw(0, num);
+      requestAnimationFrame(animate);
+      stats.update();
+    }
+    animate();
+    
+    function buildGeo(w, h) {
+      var w1 = w + 1;
+      var h1 = h + 1;
+      var w1h1 = w1 * h1;
+      var numVerts = w1h1 + w * h;
+      var vertecies = [];
+      var indecies = [];
+      var sy = -h/2;
+      var sx = -w/2;
+
+      for (var i = 0; i < h1; i++) {
+        for (var j = 0; j < w1; j++) {
+          vertecies.push(sx + j, sy + i);
+        }
+      }
+      
+      for (i = 0; i < h; i++) {
+        for (j = 0; j < w; j++) {
+          vertecies.push(sx + j + 0.5, sy + i + 0.5);
+          var r1 = i * w1 + j;
+          var r2 = (i + 1) * w1 + j;
+          var c = w1h1 + i * w + j;
+          indecies.push(c,r1+1,r1, c,r1,r2, c,r2,r2+1, c,r2+1,r1+1);
+        }
+      }
+      //     var id = w1h1 + (i * w + j);
+      // indecies.push(id+0,id+1,id+2,id+0,id+2,id+3,id+0,id+3,id+4,id+0,id+4,id+1);
+      // [.5,.5,0,0,1,0,1,1,0,1]
+      // [0,1,2,0,2,3,0,3,4,0,4,1]
+      // console.log(vertecies)
+      // console.log(indecies)
+      var ca = []; for(var i = 0; i < numVerts*3; i++) ca.push(Math.random());
+      var color = new DataBuffer(3, numVerts, new Float32Array(ca));
+      program.addAttribute('color', 3, gl.FLOAT, color);
+      
+      var position = new DataBuffer(2, numVerts, new Float32Array(vertecies));
+      program.addAttribute('position', 2, gl.FLOAT, position);
+      program.setIndecies(indecies);
+    }
+  </script>
+
+</body>
+</html>

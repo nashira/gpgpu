@@ -23,6 +23,22 @@ var Program;
     if (vertexShader && fragmentShader) {
       this.buildProgram(vertexShader, fragmentShader);
     }
+    if (params.shaderUrls) {
+      Utils.loadFile(params.shaderUrls[0], function (vertext) {
+        vertexShader = vertext;
+        if (fragmentShader) {
+          this.buildProgram(vertexShader, fragmentShader);
+          if (params.onLoad) params.onLoad();
+        }
+      });
+      Utils.loadFile(params.shaderUrls[1], function (fragment) {
+        fragmentShader = fragment;
+        if (vertexShader) {
+          this.buildProgram(vertexShader, fragmentShader);
+          if (params.onLoad) params.onLoad();
+        }
+      });
+    }
   }
 
   Program.init = function (_gl) {
@@ -197,6 +213,7 @@ var Program;
     
     if (this.blendEnabled) {
       gl.enable(gl.BLEND);
+      gl.disable(gl.DEPTH_TEST);
       if (this.blendEquation.length) {
         gl.blendEquationSeparate(this.blendEquation[0], this.blendEquation[1]);
       } else {
@@ -209,6 +226,7 @@ var Program;
       }
     } else {
       gl.disable(gl.BLEND);
+      gl.enable(gl.DEPTH_TEST);
     }
   
     var vp = this.viewport;

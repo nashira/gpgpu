@@ -77,7 +77,11 @@
       '}'
       ].join('\n');
 
-    var program = new Program(vertexShader, fragmentShader);
+    var program = new Program(null, null, {
+      shaderUrls: ['vertex', 'fragment'],
+      onLoad: initProgram
+    });
+
     var coords = new DataBuffer(2, 4, new Float32Array([0,1,0,0,1,0,1,1]));
 
     program.setIndecies([0,1,2,0,2,3]);

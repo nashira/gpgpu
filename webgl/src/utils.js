@@ -25,8 +25,51 @@ var Utils, Matrix;
     };
     cubeImage.src = url;
   }
+
+  Utils.loadFile = function (url, onLoad) {
+    var xhr = new XMLHttpRequest();
+    xhr.onreadystatechange = function () {
+      if (xhr.readyState == 4) {
+        // console.log(xhr.responseText);
+        if (onload) {
+          onload(xhr.responseText);
+        }
+      }
+    }
+    xhr.open('GET', url, true);
+    xhr.send();
+  }
   
   Matrix = {
+    
+    normal: function (arr) {
+      var sqrt = Math.sqrt(arr[0]*arr[0]+arr[1]*arr[1]+arr[2]*arr[2]);
+      return [arr[0]/sqrt, arr[1]/sqrt, arr[2]/sqrt];
+    },
+    
+    minus: function (a, b) {
+      return [a[0]-b[0], a[1]-b[1], a[2]-b[2]];
+    },
+    
+    dot: function (a, b) {
+      return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+    },
+    
+    cross: function (a, b) {
+      return [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+    },
+    
+    makeLookAt: function (eye, at, up) {
+      var zaxis = Matrix.normal(Matrix.minus(eye, at));
+      var xaxis = Matrix.normal(Matrix.cross(up, zaxis));
+      var yaxis = Matrix.cross(zaxis, xaxis);
+
+       return [xaxis[0], yaxis[0], zaxis[0], 0,
+               xaxis[1], yaxis[1], zaxis[1], 0,
+               xaxis[2], yaxis[2], zaxis[2], 0,
+              -Matrix.dot(xaxis, eye), -Matrix.dot(yaxis, eye), -Matrix.dot(zaxis, eye), 1];
+    },
+    
     // taken from html5rocks.com
     makePerspective: function(fieldOfViewInRadians, aspect, near, far) {
       var f = Math.tan(Math.PI * 0.5 - 0.5 * fieldOfViewInRadians);

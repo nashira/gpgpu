@@ -121,7 +121,12 @@
     
     var s = 256;
     // ca = []; for(var i = 0; i < s * s * 4; i++) ca.push(Math.random() + 0.4);
-    var texture = new Texture(s, s, {type: gl.FLOAT, glTexture: renderTarget.getGlTexture()});
+    var texture = new Texture(s, s, {
+      type: gl.FLOAT,
+      magFilter: gl.LINEAR,
+      minFilter: gl.LINEAR,
+      glTexture: renderTarget.getGlTexture()
+    });
     
     program2.addUniform('colorTexture', 't', texture.glTexture);
     program2.setIndecies([0,1,2,0,2,3]);

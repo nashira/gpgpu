@@ -46,7 +46,7 @@
     Program.init(gl);
     
     var vertexShader = [
-      'precision mediump float;',
+      'precision highp float;',
       'attribute vec2 coords;',
       'varying vec2 vUv;',
       'void main() {',
@@ -56,24 +56,52 @@
       ].join('\n');
 
     var fragmentShader = [
-      'precision mediump float;',
+      'precision highp float;',
       'uniform sampler2D tPosition;',
       'uniform sampler2D tOldPosition;',
       'varying vec2 vUv;',
       'uniform float d_width;',
       'uniform float d_height;',
+      
+      // 'float density(vec3 pos) {',
+      // '  return (90. / length(abs(pos) + vec3(1.))) - 1.;',
+      // '}',
+      
+      // 'float density(vec3 pos) {',
+      // '  pos = abs(pos);',
+      // '  return (60. / (max(max(pos.x, pos.y), pos.z) + 1.)) - 1.;',
+      // '}',
+      
+      ShaderLib.noise3d,
+      'float density(vec3 pos) {',
+      // '  vec3 ap = abs(pos);',
+      '  return snoise(pos * 0.02);// - (2. / (max(max(ap.x, ap.y), ap.z) + 1.)) - 1.;',
+      '}',
+      
+      'vec3 gradient(vec3 pos, float d) {',
+      '  vec3 grad;',
+      '  grad.x = density(pos + vec3(-d, 0., 0.)) - density(pos + vec3(d, 0., 0.));',
+      '  grad.y = density(pos + vec3(0., -d, 0.)) - density(pos + vec3(0., d, 0.));',
+      '  grad.z = density(pos + vec3(0., 0., -d)) - density(pos + vec3(0., 0., d));',
+      '  return normalize(grad);',
+      '}',
+      
       'void main() {',
-      '  vec3 position = texture2D(tPosition, vUv).xyz;',
-      '  vec3 oldPosition = texture2D(tOldPosition, vUv).xyz;',
-      '  vec3 pos = position + (position - oldPosition);',
-      '  float l = length(pos);',
-      '  if (l > 100.) { pos = pos * 100. / l; }',
-      // '  if (l > 100.) { pos = vec3(0.); }',
-      // '  vec3 p = clamp(pos, vec3(-100.), vec3(100));',
-      '  gl_FragColor = vec4(pos, 1.);',
-      // '  } else {',
-      // '    gl_FragColor = vec4(p, 1.);',
-      // '  }',
+      '  vec4 position = texture2D(tPosition, vUv);',
+      '  vec4 oldPosition = texture2D(tOldPosition, vUv);',
+      '  vec3 velocity = position.xyz - oldPosition.xyz;',
+      '  vec3 pos = position.xyz + velocity;',
+      '  float previous = position.w;',
+      '  float current = density(pos);',
+      '  if (current <= 0. && previous > current) {',
+      // need to interpolate to get gradient at proper point
+      '    vec3 normal = gradient(mix(pos, position.xyz, current / (current - previous)), .5);',
+      '    pos = position.xyz + reflect(velocity, normal);',
+      '  } else if (current >= 0. && previous < current) {',
+      '    vec3 normal = gradient(mix(pos, position.xyz, current / (current - previous)), .5);',
+      '    pos = position.xyz + reflect(velocity, normal);',
+      '  }',
+      '  gl_FragColor = vec4(pos, current);',
       '}'
       ].join('\n');
 
@@ -85,57 +113,78 @@
     program.addUniform('tOldPosition', 't');
     program.addAttribute('coords', 2, gl.FLOAT, coords);
     
-    var dim = 128;
+    var dim = 256;
     var num = dim * dim;
     var rt1 = new RenderTarget(dim, dim, {type: gl.FLOAT});
     var rt2 = new RenderTarget(dim, dim, {type: gl.FLOAT});
     var rt3 = new RenderTarget(dim, dim, {type: gl.FLOAT});
     
     var data = new Float32Array(num*4);
-    for (var i = 0; i < num*4; i++) data[i] = Math.random() * 2 - 1;
+    for (var i = 0; i < num*4; i++) data[i] = 0;//Math.random() * 20 - 10;
     rt1.texture.setData(data);
     
-    data = new Float32Array(num*4);
-    for (var i = 0; i < num*4; i++) data[i] = Math.random() * 2 - 1;
-    rt2.texture.setData(data);
+    var data1 = new Float32Array(num*4);
+    for (var i = 0; i < num*4; i+=4) {
+      var x = Math.random() * 1 - .5,
+          y = Math.random() * 1 - .5,
+          z = Math.random() * 1 - .5,
+          l = Math.sqrt(x*x+y*y+z*z) * 4;
+      data1[i] = data[i] + x/l;
+      data1[i+1] = data[i+1] + y/l;
+      data1[i+2] = data[i+2] + z/l;
+    };
+    rt2.texture.setData(data1);
 
     program.setRenderTarget(rt3, true);
     
     var vertexShader2 = [
       'precision highp float;',
       'attribute vec2 coords;',
+      'attribute vec3 color;',
       'uniform sampler2D pos;',
-      'uniform mat4 matrix;',
+      'uniform mat4 mvMatrix;',
+      'uniform mat4 pMatrix;',
+      'varying vec3 vColor;',
       'void main() {',
-      '  gl_PointSize = 10.;',
+      '  vColor = color;',
       '  vec3 op = texture2D(pos, coords).xyz;', 
-      // '  vec3 p = vec3(snoise(op), snoise(op.yzx), snoise(op.zxy));',
-      '  gl_Position = matrix * vec4(op, 1.);',
+      '  vec4 mvPos = mvMatrix * vec4(op, 1.);',
+      '  gl_PointSize = 2.;// * (100. / length(mvPos.xyz));',
+      '  gl_Position = pMatrix * mvPos;',
+      // '  gl_Position = pMatrix * vec4(op, 1.);',
       '}'
       ].join('\n');
     
     var fragmentShader2 = [
       'precision highp float;',
       'uniform sampler2D particleTex;',
+      'varying vec3 vColor;',
       'void main() {',
-      '  vec3 color = texture2D(particleTex, gl_PointCoord).xyz;',
-      '  gl_FragColor = vec4(color, 1.);',
+      // '  vec3 color = texture2D(particleTex, gl_PointCoord).xyz;',
+      // '  gl_FragColor = vec4(vColor * color, 1.);',
+      '  gl_FragColor = vec4(vColor, 0.5);',
       '}'
       ].join('\n');
     
     var particleTex = new Texture(64, 64, {
       magFilter: gl.LINEAR,
       minFilter: gl.LINEAR_MIPMAP_NEAREST,
-      image: 'lib/ring.png'
+      image: 'lib/sphere.png'
     });
     
     var program2 = new Program(vertexShader2, fragmentShader2, {drawMode: gl.POINTS, blendEnabled: true});
-    program2.addUniform('matrix', 'm4');
+    program2.addUniform('pMatrix', 'm4');
+    program2.addUniform('mvMatrix', 'm4');
     program2.addUniform('particleTex', 't', particleTex.glTexture);
     program2.addUniform('pos', 't', rt1.getGlTexture());
     
     var coords = Utils.getTextureIndecies(dim, dim);
+    var color = new DataBuffer(3, num);
+    var ca = []; for (var i = 0; i < num * 3; i++) ca.push(Math.random());
+    color.setData(new Float32Array(ca));
+    
     program2.addAttribute('coords', 2, gl.FLOAT, coords);
+    program2.addAttribute('color', 3, gl.FLOAT, color);
     
     program2.setViewport(0, 0, width * 2, height * 2);
     
@@ -144,6 +193,10 @@
     // var sm = Matrix.makeScale(0.5, 0.5, 0.5);
     var tm = Matrix.makeTranslation(0, 0, -200);
     var pm = Matrix.makePerspective(1, width / height, 0, 1000);
+    // Matrix.multiply(matrix, rm, tm);
+    program2.setUniform('pMatrix', pm);
+    Matrix.multiply(matrix, rm, tm);
+    program2.setUniform('mvMatrix', matrix);
     
     var flip = 0;
     function animate() {
@@ -171,8 +224,8 @@
       
       angle += 0.003;
       Matrix.setYRotation(rm, angle);
-      Matrix.multiply(matrix, rm, tm, pm);
-      program2.setUniform('matrix', matrix);
+      Matrix.multiply(matrix, rm, tm);
+      program2.setUniform('mvMatrix', matrix);
       
       program.draw(0, 6);
       program2.draw(0, num);
