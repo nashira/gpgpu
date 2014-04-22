@@ -64,20 +64,24 @@
 
       ShaderLib.noise3d,
       
-      'float noise(vec2 pos, float freq, float amp) {',
+      'float rmnoise(vec2 pos, float freq, float amp) {',
       '  float val = 1. - abs(snoise(vec3(pos, time) * freq));',
       '  return val * val  * amp;',
+      '}',
+      
+      'float noise(vec2 pos, float freq, float amp) {',
+      '  return snoise(vec3(pos, time) * freq) * amp;',
       '}',
       
       
       'float fnoise(vec2 pos) {',
       '  float val = ',
-      '      noise(pos, .5, .2)',
-      '    + noise(pos, 2., .1)',
-      '    + noise(pos, 4., .05)',
-      '    + noise(pos, 8., .025);',
-      // '    + noise(pos, .0016, 16.)',
-      // '    + noise(pos, .0032, 16.);',
+      '      noise(pos, 4., .08)',
+      // '    + noise(pos, 8., .1)',
+      '    + rmnoise(pos, 10., .025)',
+      '    + rmnoise(pos, 20., .0125);',
+      // '    + rmnoise(pos, 40., .0125);',
+      '    + rmnoise(pos, 80., .00625);',
       // '  float val = noise(pos, .4, 4.);',
       // '  return clamp(val, 0., 10.);',
       '  return val;',
@@ -100,7 +104,7 @@
       '  gl_Position = pMatrix * wPos;',
       // '  gl_Position = matrix * vec4(position.x, 0., position.y, 1.);',
       // '  gl_Position = vec4(position, 0., 1.);',
-      '  vec3 normal = gradient(position, .0039);',
+      '  vec3 normal = gradient(position, .008);',
       '  vPosition = pos;', 
       '  vWorldPos = wPos.xyz;',
       '  vNormal = normalize((mvMatrix * vec4(normal, 0.)).xyz);',
@@ -136,7 +140,7 @@
       // 'vec4 frag_diffuse = vec4(vColor, 1.);',
       // 'vec4 frag_diffuse = vec4(1.);',
       
-      'vec4 frag_diffuse = vec4(mix(vec3(.4,.25,.15), vec3(1.), vPosition.y * 1.2), 1.);',
+      'vec4 frag_diffuse = vec4(mix(vec3(.4,.25,.15), vec3(1.), vPosition.y * 12.2), 1.);',
       'vec4 diffuse_factor = max(-dot(normal, mv_light_direction), 0.0) * light_diffuse;',
       'vec4 ambient_diffuse_factor = diffuse_factor + light_ambient;',
       // 'vec4 specular_factor = max(pow(-dot(reflection, eye), vNormal.y * .1), 0.0) * light_specular;',
@@ -165,9 +169,9 @@
 
     var rm = Matrix.makeYRotation(0);
     var sm = Matrix.makeScale(2, 2, 2);
-    var tm = Matrix.makeLookAt([0, 3, 5], [0, 0, 0], [0, 1, 0]);
+    var tm = Matrix.makeLookAt([0, .6, 3], [0, 0, 0], [0, 1, 0]);
     // var tm = Matrix.makeLookAt([0, 8, 20], [0, 0, 0], [0, 1, 0]);
-    var pm = Matrix.makePerspective(.8, width / height, 1, 1000);
+    var pm = Matrix.makePerspective(.8, width / height, .1, 1000);
     var matrix = [];
     
     program.addUniform('pMatrix', 'm4', pm);
@@ -176,7 +180,7 @@
     var time = 0;
     function animate() {
       time += 0.0005;
-      program.setUniform('time', time/10);
+      program.setUniform('time', time/100);
 
       Matrix.setYRotation(rm, time);
       Matrix.multiply(matrix, sm, rm, tm);
