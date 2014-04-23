@@ -44,12 +44,14 @@ var Program;
   Program.init = function (_gl) {
     gl = _gl;
     DataBuffer.init(gl);
+    IndexBuffer.init(gl);
     RenderTarget.init(gl);
     Texture.init(gl);
     
 		gl.getExtension('OES_texture_float');
 		gl.getExtension('OES_texture_float_linear');
 		gl.getExtension('OES_standard_derivatives');
+    gl.getExtension('OES_element_index_uint');
   }
 
   Program.prototype.buildProgram = function (vertexShader, fragmentShader) {
@@ -176,17 +178,8 @@ var Program;
     }
   }
   
-  Program.prototype.setIndecies = function (array) {
-    this.useIndecies = true;
-    this.indexBuffer = gl.createBuffer();
-    
-    if (array instanceof Array) {
-      array = new Uint16Array(array);
-    }
-    
-		gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
-		gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, array, gl.STATIC_DRAW);
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
+  Program.prototype.setIndexBuffer = function (indexBuffer) {
+    this.indexBuffer = indexBuffer;
   }
   
   Program.prototype.setRenderTarget = function (renderTarget, setViewport) {
@@ -236,8 +229,8 @@ var Program;
     this.loadUniforms();
     
     if (this.indexBuffer != null) {
-      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
-      gl.drawElements(this.drawMode, count, gl.UNSIGNED_SHORT, first * 2);
+      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer.glBuffer);
+      gl.drawElements(this.drawMode, count, this.indexBuffer.type, first * this.indexBuffer.itemSize);
       gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
     } else {
       gl.drawArrays(this.drawMode, first, count);
