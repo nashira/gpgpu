@@ -17,6 +17,7 @@ var Program;
     this.blendEquation = params.blendEquation || gl.FUNC_ADD;
     this.blendFunc = params.blendFunc || [gl.SRC_ALPHA, gl.ONE];
     this.drawMode = 'drawMode' in params ? params.drawMode : gl.TRIANGLES;
+    this.cullFace = 'cullFace' in params ? params.cullFace : null;
     // this.drawFirst = 0;
     // this.drawCount = 0;
   
@@ -220,6 +221,13 @@ var Program;
     } else {
       gl.disable(gl.BLEND);
       gl.enable(gl.DEPTH_TEST);
+    }
+    
+    if (this.cullFace != null) {
+      gl.enable(gl.CULL_FACE);
+      gl.cullFace(this.cullFace);
+    } else {
+      gl.disable(gl.CULL_FACE);
     }
   
     var vp = this.viewport;

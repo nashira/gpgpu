@@ -17,7 +17,9 @@ var RenderTarget;
 
   RenderTarget.prototype.init = function (params) {
     this.texture = new Texture(this.width, this.height, params);
-    this.texture.init().setData(null);
+    if (!params.data) {
+      this.texture.init().setData(null);
+    }
     this.framebuffer = gl.createFramebuffer();
     // this.renderbuffer = gl.createRenderbuffer();
 
