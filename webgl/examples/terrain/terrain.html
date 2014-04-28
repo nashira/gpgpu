@@ -53,20 +53,32 @@
       'precision highp float;',
       'uniform mat4 mvMatrix;',
       'uniform mat4 pMatrix;',
-      'uniform sampler2D position;',
+      'uniform sampler2D erosion;',
+      'uniform sampler2D flux;',
+      'uniform float drawWater;',
       'attribute vec2 coords;',
 
       'varying vec3 vPosition;',
-      'varying vec3 vWorldPos;',
-      'varying vec3 vNormal;',
+      // 'varying vec3 vWorldPos;',
+      'varying vec4 vData;',
+      'varying vec4 vFlux;',
       
       'void main() {',
-      '  vec4 vertex = texture2D(position, coords);',
-      '  vec3 pos = vec3(coords.x - .5, vertex.a, coords.y - .5);',
+      '  vec4 vertex = texture2D(erosion, coords);',
+      '  vec3 pos;',
+      '  if (drawWater > 0.){',
+      '    vFlux = vec4(0., .3, .6, .2);',
+      '    pos = vec3(coords.x - .5, vertex.x + vertex.y - 0.003, coords.y - .5);',
+      '  } else {',
+      '    vFlux = vec4(1.);',
+      '    pos = vec3(coords.x - .5, vertex.x, coords.y - .5);',
+      '  }',
+      // '  vec3 pos = vec3(coords.x - .5, vertex.x + vertex.y, coords.y - .5);',
       '  vec4 wPos = mvMatrix * vec4(pos, 1.);',
       '  vPosition = pos;',
-      '  vWorldPos = wPos.xyz;',
-      '  vNormal = vertex.xyz;',
+      // '  vWorldPos = wPos.xyz;',
+      // '  vFlux = texture2D(flux, coords);',
+      '  vData = vertex;',
       '  gl_Position = pMatrix * wPos;',
       '}'
       ].join('\n');
@@ -76,10 +88,13 @@
       'precision highp float;',
       'uniform float time;',
       'uniform mat4 mvMatrix;',
+      'uniform float drawWater;',
       
-      'varying vec3 vWorldPos;',
+      // 'varying vec3 vWorldPos;',
+      // 'varying vec3 vNormal;',
       'varying vec3 vPosition;',
-      'varying vec3 vNormal;',
+      'varying vec4 vFlux;',
+      'varying vec4 vData;',
 
       // 'const vec3 light_direction = vec3(0.24, -0.97, 0.);',
       'const vec3 light_direction = vec3(0.0, -1., 0.);',
@@ -89,28 +104,42 @@
       'const vec4 light_specular = vec4(1.0, 1.0, 1.0, 1.0);',
       
       'void main() {',
+      // '  gl_FragColor = vec4(1.);',
       // '  gl_FragColor = vec4(.4,.25,.15, 1.);',
-      // '  gl_FragColor = vec4(vColor, 1.);',
-      '  gl_FragColor = vec4(vNormal, 1.);',
+      // '  gl_FragColor = vec4(vNormal.z * 100., 0., 1., 1.);',
+      // '  gl_FragColor = vec4(vData.xyz * 5., 1.);',
+      // '  gl_FragColor = vec4(vec3(length(vFlux) * 20. + 0.1), 1.);',
+      // '  gl_FragColor = vFlux;',
       
-      'vec3 mv_light_direction = normalize((mvMatrix * vec4(light_direction, 0.0)).xyz);',
-      'vec3 eye = normalize(vWorldPos);',
-      'vec3 reflection = reflect(mv_light_direction, vNormal);',
-      // 'vec4 frag_diffuse = vec4(.1);',
-      
-      'vec4 frag_diffuse = vec4(mix(vec3(.4,.25,.15), vec3(1.), vPosition.y * 30.), 1.);',
-      'vec4 diffuse_factor = max(-dot(vNormal, mv_light_direction), 0.0) * light_diffuse;',
-      'vec4 ambient_diffuse_factor = diffuse_factor + light_ambient;',
-      'vec4 specular_factor = max(pow(-dot(reflection, eye), vNormal.y * vNormal.y), 0.0) * light_specular;',
-      'gl_FragColor = specular_factor * vec4(.1) + ambient_diffuse_factor * frag_diffuse;',
+      // 'vec3 mv_light_direction = normalize((mvMatrix * vec4(light_direction, 0.0)).xyz);',
+      // 'vec3 eye = normalize(vWorldPos);',
+      // 'vec3 reflection = reflect(mv_light_direction, vNormal);',
+      // // 'vec4 frag_diffuse = vec4(.1);',
+      // 
+      '  vec3 color = mix(vec3(.4,.25,.15), vec3(1.), vPosition.y * 5. + .2);',
+      // '  color = mix(color, vec3(0., 0.3, 0.6), vData.y * 1000.);',
+      // '  gl_FragColor = vec4(color, 1.);',
+      '  if (drawWater > .0) {',
+      '    gl_FragColor = vFlux;',
+      '  }  else {',
+      '    gl_FragColor = vec4(color, 1.);',
+      '  }',
+      // '  gl_FragColor = vec4(color, 1.);',
+      // 'gl_FragColor = color;',
+      // 'vec4 frag_diffuse = vec4(mix(vec3(.4,.25,.15), vec3(1.), vPosition.y * 5.), 1.);',
+      // 'vec4 diffuse_factor = max(-dot(vNormal, mv_light_direction), 0.0) * light_diffuse;',
+      // 'vec4 ambient_diffuse_factor = diffuse_factor + light_ambient;',
+      // 'vec4 specular_factor = max(pow(-dot(reflection, eye), vNormal.y * vNormal.y), 0.0) * light_specular;',
+      // 'gl_FragColor = specular_factor * vec4(.1) + ambient_diffuse_factor * frag_diffuse;',
       
       // 'gl_FragColor = ambient_diffuse_factor * frag_diffuse;',
+      // 'gl_FragColor = frag_diffuse;',
       
       '}'
       ].join('\n');
 
     
-    var w = 512, h = 512;
+    var w = 256, h = 256;
     var terrainGen = new TerrainGenerator(w, h);
     var program = new Program(vertexShader, fragmentShader, {drawMode: gl.TRIANGLE_STRIP, cullFace: gl.BACK});
     // var program = new Program(vertexShader, fragmentShader, {drawMode: gl.LINE_STRIP});
@@ -118,19 +147,22 @@
     buildGeo(w, h);
     var num = (2 * w) * (h - 1) + 3 * (h - 1);
     
-    program.addUniform('position', 't', terrainGen.renderTarget.getGlTexture())
+    program.addUniform('erosion', 't');
+    program.addUniform('flux', 't');
     program.addUniform('time', 'f', 0);
+    program.addUniform('drawWater', 'f', 0);
     program.setViewport(0, 0, width * 2, height * 2);
 
     var rm = Matrix.makeYRotation(0);
     var sm = Matrix.makeScale(2,2,2);
-    var tm = Matrix.makeLookAt([0, 1, 3], [0, 0, 0], [0, 1, 0]);
+    var tm = Matrix.makeLookAt([0, 1.5, 3.7], [0, 0, 0], [0, 1, 0]);
     // var tm = Matrix.makeLookAt([0, 8, 20], [0, 0, 0], [0, 1, 0]);
     var pm = Matrix.makePerspective(.8, width / height, .1, 1000);
     var matrix = [];
+    Matrix.multiply(matrix, sm, rm, tm);
     
     program.addUniform('pMatrix', 'm4', pm);
-    program.addUniform('mvMatrix', 'm4', tm);
+    program.addUniform('mvMatrix', 'm4', matrix);
 
     var time = 0, count = 0;
     function animate() {
@@ -142,25 +174,37 @@
       Matrix.multiply(matrix, sm, rm, tm);
       program.setUniform('mvMatrix', matrix);
       
-      if (count % 2 == 0) {
+      // if (count % 2 == 0) {
         // terrainGen.erosionProgram.step();
-        terrainGen.applyErosion();
-        program.setUniform('position', terrainGen.renderTarget.getGlTexture());
-      }
+        // terrainGen.applyErosion();
+        terrainGen.addWater();
+        terrainGen.computeFlux();
+        terrainGen.updateWater();
+        terrainGen.updateSediment();
+        program.setUniform('flux', terrainGen.fluxTarget.getGlTexture());
+        // program.setUniform('erosion', terrainGen.erosionTarget.getGlTexture());
+      // }
+
+      program.setUniform('drawWater', -1);
+      program.setUniform('erosion', terrainGen.erosionTarget.getGlTexture());
+      program.drawMode = gl.TRIANGLE_STRIP;
+      program.draw(0, num);
+      program.setUniform('drawWater', 1);
+      program.drawMode = gl.LINE_STRIP;
       program.draw(0, num);
       
-      // requestAnimationFrame(animate);
+      requestAnimationFrame(animate);
       stats.update();
     }
     
 
     terrainGen.generate();
-    terrainGen.erosionProgram.setUniform('terrain', terrainGen.renderTarget.getGlTexture());
-    terrainGen.erosionProgram.setRenderTarget(null);
-    terrainGen.erosionProgram.draw(0,4);
+    // terrainGen.erosionProgram.setUniform('erosion', terrainGen.renderTarget.getGlTexture());
+    // terrainGen.erosionProgram.setRenderTarget(null);
+    // terrainGen.erosionProgram.draw(0,4);
     
     // terrainGen.erosionProgram.step();
-    // animate();
+    animate();
     
     function buildGeo(w, h) {
       var w1 = w - 1;
