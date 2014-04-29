@@ -120,7 +120,7 @@
       // '  color = mix(color, vec3(0., 0.3, 0.6), vData.y * 1000.);',
       // '  gl_FragColor = vec4(color, 1.);',
       '  if (vData.y > .001) {',
-      '    gl_FragColor = vec4(mix(color, vec3(0., .3, .6), vData.y * 80.), 1.);',
+      '    gl_FragColor = vec4(mix(color, vec3(0., .3, .6), vData.y * 60.), 1.);',
       '  }  else {',
       '    gl_FragColor = vec4(color, 1.);',
       '  }',
@@ -212,6 +212,25 @@
     
     // terrainGen.erosionProgram.step();
     animate();
+    
+    var zoom = 0, spin = 0, down = false;
+    window.addEventListener('mousewheel', function (e) {
+      zoom += e.wheelDeltaY * 0.002;
+      tm = Matrix.makeLookAt([spin, 1.5, 3.7 + zoom], [0, 0, 0], [0, 1, 0]);
+    }, false);
+
+    window.addEventListener("mousedown", function(e) {
+        down = e.x;
+    }, false);
+    window.addEventListener("mousemove", function(e) {
+      // if (down) {
+      //   spin += (e.x - down) * 0.001;
+      //   tm = Matrix.makeLookAt([spin, 1.5, 3.7 + zoom], [0, 0, 0], [0, 1, 0]);
+      // }
+    }, false);
+    window.addEventListener("mouseup", function() {
+      down = 0;
+    }, false);
     
     function buildGeo(w, h) {
       var w1 = w - 1;

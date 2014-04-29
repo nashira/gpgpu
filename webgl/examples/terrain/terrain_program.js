@@ -50,7 +50,7 @@ var TerrainGenerator;
     '}',
     
     'void main() {',
-    '  float height = fnoise(vCoords + 15.);',
+    '  float height = fnoise(vCoords + -5.);',
     // '  float height = max(0., (vCoords.x - vCoords.y - .5) * 0.5);',
     // '  float height = max(0., .1 - max(abs(vCoords.x - .5), abs(vCoords.y - .5)));',
     // '  vec2 radius = vCoords - vec2(.5);',
