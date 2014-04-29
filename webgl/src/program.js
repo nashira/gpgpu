@@ -204,6 +204,9 @@ var Program;
       gl.bindFramebuffer(gl.FRAMEBUFFER, this.framebuffer);
       // gl.bindRenderbuffer(gl.RENDERBUFFER, this.renderbuffer);
     }
+    if (this.renderTarget) {
+      gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this.renderTarget.getGlTexture(), 0);
+    }
     
     if (this.blendEnabled) {
       gl.enable(gl.BLEND);
