@@ -49,10 +49,8 @@
       'uniform mat4 mvMatrix;',
       'uniform mat4 pMatrix;',
       'uniform sampler2D erosion;',
-      'uniform sampler2D flux;',
-      'uniform float drawWater;',
       'attribute vec2 coords;',
-      'const float cDelta = 1. / 1024.;',
+      'const float cDelta = 1. / #{size}.;',
 
       'varying vec3 vNormal;',
       'varying vec3 vWorldPos;',
@@ -85,6 +83,9 @@
     var fragmentShader = [
       'precision highp float;',
       'uniform float time;',
+      'uniform float lightness;',
+      'uniform float colorScale;',
+      
       'uniform mat4 mvMatrix;',
       'uniform float drawWater;',
       
@@ -107,13 +108,13 @@
       'const vec3 snow = vec3(.95, .95, .99);',
       
       'void main() {',
-      '  float height = max(0., vData.x) * 5.;',
+      '  float height = max(0., vData.x) * colorScale;',
       '  vec4 weights;',
       '  weights.x = clamp(1. - abs(height - 0.0) * 5., 0., 1.);',
       '  weights.y = clamp(1. - abs(height - 0.3) * 4., 0., 1.);',
       '  weights.z = clamp(1. - abs(height - 0.6) * 4., 0., 1.);',
       '  weights.w = clamp(1. - abs(height - 0.9) * 4., 0., 1.);',
-      '  weights /= (weights.x + weights.y + weights.z + weights.w - 0.2);',
+      '  weights /= (weights.x + weights.y + weights.z + weights.w - lightness);',
       '  vec3 color = sand * weights.x + grass * weights.y + rock * weights.z + snow * weights.w;',
       
       'vec3 mv_light_direction = normalize((mvMatrix * vec4(light_direction, 0.0)).xyz);',
@@ -142,6 +143,8 @@
     
     var w = 1024, h = 1024;
     var terrainGen = new TerrainGenerator(w, h);
+
+    vertexShader = vertexShader.replace(/#\{size\}/g, w);
     var program = new Program(vertexShader, fragmentShader, {
       drawMode: gl.TRIANGLE_STRIP,
       // drawMode: gl.LINE_STRIP,
@@ -149,16 +152,15 @@
       // blendEnabled: true,
       // blendFunc: [gl.SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA]
     });
-    // var program = new Program(vertexShader, fragmentShader, {drawMode: gl.LINE_STRIP});
 
     buildGeo(w, h);
     var num = (2 * w) * (h - 1) + 3 * (h - 1);
     
     program.addUniform('erosion', 't');
-    program.addUniform('flux', 't');
     program.addUniform('time', 'f', 0);
-    program.addUniform('drawWater', 'f', 0);
-    program.setViewport(0, 0, width * 2, height * 2);
+    program.addUniform('lightness', 'f');
+    program.addUniform('colorScale', 'f');
+    program.setViewport(0, 0, width * devicePixelRatio, height * devicePixelRatio);
 
     var rm = Matrix.makeYRotation(0);
     var sm = Matrix.makeScale(2,2,2);
@@ -170,6 +172,11 @@
     
     program.addUniform('pMatrix', 'm4', pm);
     program.addUniform('mvMatrix', 'm4', matrix);
+    
+    var params = {
+      lightness: 0.2,
+      colorScale: 5,
+    }
 
     var time = 0, count = 0;
     function animate() {
@@ -181,46 +188,17 @@
       Matrix.multiply(matrix, sm, rm, tm);
       program.setUniform('mvMatrix', matrix);
       
-      // if (count % 60 == 0) {
-      //   terrainGen.corners *= -1;
-      // }
-      
       terrainGen.step();
       
-      program.setUniform('flux', terrainGen.fluxTarget.getGlTexture());
+      // program.setUniform('flux', terrainGen.fluxTarget.getGlTexture());
       program.setUniform('erosion', terrainGen.erosionTarget.getGlTexture());
-      
-     // gl.clear(gl.DEPTH_BUFFER_BIT);
-      // gl.disable(gl.DEPTH_TEST)
-      // gl.depthMask(gl.FALSE);
-      // program.setUniform('drawWater', -1);
-      // program.blendEnabled = false;
-      // program.drawMode = gl.TRIANGLE_STRIP;
+      program.setUniform('lightness', params.lightness);
+      program.setUniform('colorScale', params.colorScale);
       program.draw(0, num);
-
-
-      // gl.enable(gl.DEPTH_TEST) 
-      // gl.depthMask(gl.FALSE);
-      // program.setUniform('drawWater', 1);
-      // // // // program.drawMode = gl.LINE_STRIP;
-      // program.blendEnabled = true;
-      // program.draw(0, num);
-      
-      
-      
-      
-      
       requestAnimationFrame(animate);
     }
-    
 
     terrainGen.generate();
-    // terrainGen.addWater();
-    // terrainGen.erosionProgram.setUniform('erosion', terrainGen.renderTarget.getGlTexture());
-    // terrainGen.erosionProgram.setRenderTarget(null);
-    // terrainGen.erosionProgram.draw(0,4);
-    
-    // terrainGen.erosionProgram.step();
     animate();
     
     var zoom = 0, spin = 0, down = false;
@@ -245,24 +223,18 @@
     function buildGeo(w, h) {
       var w1 = w - 1;
       var h1 = h - 1;
-      // var w1h1 = w1 * h1;
+
       var i, j, y, y1, d = true;
       var numVerts = w * h;
       var vertecies = [];
       var indecies = [];
       var sx = 1 / w ;
       var sy = 1 / h;
-      // var sy = 0;
-      // var sx = 0;
       
       for (i = 0; i < h; i++) {
         for (j = 0; j < w; j++) {
           var x = sx * j + sx * 0.5;
           var y = sy * i + sy * 0.5;
-          // var l = Math.sqrt(2 * Math.max(x * x, y * y));
-          // var l = Math.sqrt(x * x + y * y);
-          // l = Math.exp(l*.001);
-          // vertecies.push(x * l, y * l);
           vertecies.push(x, y);
         }
       }
@@ -283,16 +255,6 @@
         }
         d = !d;
       }
-      //     var id = w1h1 + (i * w + j);
-      // indecies.push(id+0,id+1,id+2,id+0,id+2,id+3,id+0,id+3,id+4,id+0,id+4,id+1);
-      // [.5,.5,0,0,1,0,1,1,0,1]
-      // [0,1,2,0,2,3,0,3,4,0,4,1]
-      // console.log(numVerts)
-      // console.log(vertecies)
-      // console.log(indecies)
-      // var ca = []; for(var i = 0; i < numVerts*3; i++) ca.push(Math.random());
-      // var color = new DataBuffer(3, numVerts, new Float32Array(ca));
-      // program.addAttribute('color', 3, gl.FLOAT, color);
       
       var position = new DataBuffer(2, numVerts, new Float32Array(vertecies));
       program.addAttribute('coords', 2, gl.FLOAT, position);
