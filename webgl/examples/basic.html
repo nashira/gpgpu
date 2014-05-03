@@ -22,19 +22,14 @@
 <body>
   <canvas id="canvas"></canvas>
 
-  <script src='lib/stats.min.js'></script>
   <script src='../src/program.js'></script>
   <script src='../src/databuffer.js'></script>
+  <script src='../src/indexbuffer.js'></script>
   <script src='../src/rendertarget.js'></script>
   <script src='../src/texture.js'></script>
   <script src='../src/shaderlib.js'></script>
 
   <script>
-  	var stats = new Stats();
-  	stats.domElement.style.position = 'absolute';
-  	stats.domElement.style.left = '0px';
-  	stats.domElement.style.top = '0px';
-  	document.body.appendChild(stats.domElement);
     var canvas = document.getElementById('canvas');
     var devicePixelRatio = window.devicePixelRatio || 1;
     var width = window.innerWidth;
@@ -74,8 +69,7 @@
       '}'
       ].join('\n');
 
-    var position = new DataBuffer(2, 4);
-    position.setData(new Float32Array([0,0, 0,1, 1,0, 1,1]));
+    var position = new DataBuffer(2, 4, new Float32Array([0,0, 0,1, 1,0, 1,1]));
 
     var color = new DataBuffer(3, 4);
     var ca = []; for(var i = 0; i < 12; i++) ca.push(Math.random());
@@ -88,21 +82,15 @@
     program.addAttribute('color', 3, gl.FLOAT);
     program.setAttribute('color', color);
     
-    // program.setIndecies([0,1,2,0,2,3]);
-    
     program.addUniform('time', 'f', 0);
-    program.setViewport(width - height, 0, height * 2, height * 2);
+    program.setViewport(width - height, 0, height * devicePixelRatio, height * devicePixelRatio);
 
-    // var renderTarget = new RenderTarget(256, 256);
-    // program.setRenderTarget(renderTarget, true)
-    // program.drawMode = gl.LINE_STRIP;
     var time = 0;
     function animate() {
       time += 0.002;
       program.setUniform('time', time);
       program.draw(0, 4);
       requestAnimationFrame(animate)
-      stats.update();
     }
     animate();
   </script>

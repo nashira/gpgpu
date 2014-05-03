@@ -21,20 +21,15 @@
 <body>
   <canvas id="canvas" width="500" height="500"></canvas>
 
-  <script src='lib/stats.min.js'></script>
   <script src='../src/program.js'></script>
   <script src='../src/databuffer.js'></script>
+  <script src='../src/indexbuffer.js'></script>
   <script src='../src/rendertarget.js'></script>
   <script src='../src/texture.js'></script>
   <script src='../src/shaderlib.js'></script>
   <script src='../src/utils.js'></script>
 
   <script>
-  	var stats = new Stats();
-  	stats.domElement.style.position = 'absolute';
-  	stats.domElement.style.left = '0px';
-  	stats.domElement.style.top = '0px';
-  	document.body.appendChild(stats.domElement);
     var canvas = document.getElementById('canvas');
     var devicePixelRatio = window.devicePixelRatio || 1;
     var width = window.innerWidth;
@@ -71,6 +66,7 @@
       
     var program = new Program(vertexShader, fragmentShader, {
       blendEnabled: true,
+      depthTest: false,
       drawMode: gl.POINTS,
       viewport: {x: 0, y: 0, w: width * 2, h: height * 2}
     });
@@ -110,7 +106,6 @@
       program.draw(0, 1000);
       
       requestAnimationFrame(animate);
-      stats.update();
     }
     animate();
     

@@ -21,20 +21,15 @@
 <body>
   <canvas id="canvas" width="500" height="500"></canvas>
 
-  <script src='lib/stats.min.js'></script>
   <script src='../src/program.js'></script>
   <script src='../src/databuffer.js'></script>
+  <script src='../src/indexbuffer.js'></script>
   <script src='../src/rendertarget.js'></script>
   <script src='../src/texture.js'></script>
   <script src='../src/shaderlib.js'></script>
   <script src='../src/utils.js'></script>
 
   <script>
-  	var stats = new Stats();
-  	stats.domElement.style.position = 'absolute';
-  	stats.domElement.style.left = '0px';
-  	stats.domElement.style.top = '0px';
-  	document.body.appendChild(stats.domElement);
     var canvas = document.getElementById('canvas');
     var devicePixelRatio = window.devicePixelRatio || 1;
     var width = window.innerWidth;
@@ -106,9 +101,8 @@
       ].join('\n');
 
     var program = new Program(vertexShader, fragmentShader);
-    var coords = new DataBuffer(2, 4, new Float32Array([0,1,0,0,1,0,1,1]));
+    var coords = new DataBuffer(2, 4, new Float32Array([0,0, 0,1, 1,0, 1,1]));
 
-    program.setIndecies([0,1,2,0,2,3]);
     program.addUniform('tPosition', 't');
     program.addUniform('tOldPosition', 't');
     program.addAttribute('coords', 2, gl.FLOAT, coords);
@@ -172,7 +166,11 @@
       image: 'lib/sphere.png'
     });
     
-    var program2 = new Program(vertexShader2, fragmentShader2, {drawMode: gl.POINTS, blendEnabled: true});
+    var program2 = new Program(vertexShader2, fragmentShader2, {
+      drawMode: gl.POINTS,
+      blendEnabled: true,
+      depthTest: false
+    });
     program2.addUniform('pMatrix', 'm4');
     program2.addUniform('mvMatrix', 'm4');
     program2.addUniform('particleTex', 't', particleTex.glTexture);
@@ -186,7 +184,7 @@
     program2.addAttribute('coords', 2, gl.FLOAT, coords);
     program2.addAttribute('color', 3, gl.FLOAT, color);
     
-    program2.setViewport(0, 0, width * 2, height * 2);
+    program2.setViewport(0, 0, width * devicePixelRatio, height * devicePixelRatio);
     
     var angle = 0, matrix = [];
     var rm = Matrix.makeYRotation(angle);
@@ -227,11 +225,10 @@
       Matrix.multiply(matrix, rm, tm);
       program2.setUniform('mvMatrix', matrix);
       
-      program.draw(0, 6);
+      program.draw(0, 4);
       program2.draw(0, num);
       
       requestAnimationFrame(animate);
-      stats.update();
     }
     animate();
   </script>

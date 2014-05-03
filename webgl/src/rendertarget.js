@@ -8,7 +8,7 @@ var RenderTarget;
     this.texture = null;
     this.framebuffer = null;
     this.renderBuffer = null;
-    this.init(params);
+    this.init(params || {});
   }
   
   RenderTarget.init = function (_gl) {
