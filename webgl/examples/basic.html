@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+  <title>webgl</title>
+  <meta charset='utf-8'>
+  <meta name='viewport' content='width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0'>
+  <style>
+  body {
+    background-color: #000000;
+    margin: 0px;
+    overflow: hidden;
+    font-family:Monospace;
+    font-size:13px;
+    text-align:center;
+    font-weight: bold;
+    text-align:center;
+  }
+  canvas {}
+
+  </style>
+</head>
+<body>
+  <canvas id="canvas"></canvas>
+
+  <script src='../src/program.js'></script>
+  <script src='../src/databuffer.js'></script>
+  <script src='../src/indexbuffer.js'></script>
+  <script src='../src/rendertarget.js'></script>
+  <script src='../src/texture.js'></script>
+  <script src='../src/shaderlib.js'></script>
+
+  <script>
+    var canvas = document.getElementById('canvas');
+    var devicePixelRatio = window.devicePixelRatio || 1;
+    var width = window.innerWidth;
+    var height = window.innerHeight;
+    canvas.width = width * devicePixelRatio;
+    canvas.height = height * devicePixelRatio;
+    canvas.style.width = canvas.style.height = '100%';
+    var gl = canvas.getContext('webgl');
+    Program.init(gl);
+
+    var vertextShader = [
+      'precision highp float;',
+      'attribute vec2 position;',
+      'attribute vec3 color;',
+      'varying vec3 vColor;',
+      'varying vec2 vPos;',
+      'void main() {',
+      '  vColor = color;',
+      '  vPos = position;',
+      '  gl_Position = vec4(position * 2. - 1., 0.0, 1.0);',
+      '}'
+      ].join('\n');
+
+    var fragmentShader = [
+      'precision highp float;',
+      'uniform float time;',
+      'varying vec3 vColor;',
+      'varying vec2 vPos;',
+      ShaderLib.noise3d,
+      'vec3 n3(vec2 coords, float scale) {',
+      '  return vec3(snoise(vec3(coords * scale, time)), snoise(vec3(coords.yx * scale, time)), snoise(vec3(time, coords.x * scale, coords.y * scale)));',
+      '}',
+      'void main() {',
+      '  vec3 color = n3(vPos, 2.);',
+      '  gl_FragColor = vec4((color * .5 + .5), 1.);',
+      // '  gl_FragColor = vec4(vec3(snoise(vPos * 8.)), 1.);',
+      '}'
+      ].join('\n');
+
+    var position = new DataBuffer(2, 4, new Float32Array([0,0, 0,1, 1,0, 1,1]));
+
+    var color = new DataBuffer(3, 4);
+    var ca = []; for(var i = 0; i < 12; i++) ca.push(Math.random());
+    color.setData(new Float32Array(ca));
+
+    var program = new Program(vertextShader, fragmentShader, {drawMode: gl.TRIANGLE_STRIP});
+    program.addAttribute('position', 2, gl.FLOAT);
+    program.setAttribute('position', position);
+
+    program.addAttribute('color', 3, gl.FLOAT);
+    program.setAttribute('color', color);
+    
+    program.addUniform('time', 'f', 0);
+    program.setViewport(width - height, 0, height * devicePixelRatio, height * devicePixelRatio);
+
+    var time = 0;
+    function animate() {
+      time += 0.002;
+      program.setUniform('time', time);
+      program.draw(0, 4);
+      requestAnimationFrame(animate)
+    }
+    animate();
+  </script>
+
+</body>
+</html>

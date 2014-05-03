@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+  <title>webgl</title>
+  <meta charset='utf-8'>
+  <meta name='viewport' content='width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0'>
+  <style>
+  body {
+    background-color: #000000;
+    margin: 0px;
+    overflow: hidden;
+    font-family:Monospace;
+    font-size:13px;
+    text-align:center;
+    font-weight: bold;
+    text-align:center;
+  }
+
+  </style>
+</head>
+<body>
+  <canvas id="canvas" width="500" height="500"></canvas>
+
+  <script src='../src/program.js'></script>
+  <script src='../src/databuffer.js'></script>
+  <script src='../src/indexbuffer.js'></script>
+  <script src='../src/rendertarget.js'></script>
+  <script src='../src/texture.js'></script>
+  <script src='../src/shaderlib.js'></script>
+  <script src='../src/utils.js'></script>
+
+  <script>
+    var canvas = document.getElementById('canvas');
+    var devicePixelRatio = window.devicePixelRatio || 1;
+    canvas.width = window.innerWidth * devicePixelRatio;
+    canvas.height = window.innerHeight * devicePixelRatio;
+    canvas.style.width = canvas.style.height = '100%';
+    var gl = canvas.getContext('webgl');
+    Program.init(gl);
+
+    var vertexShader = [
+      'precision highp float;',
+      'attribute vec2 position;',
+      'attribute vec3 color;',
+      'varying vec3 vColor;',
+      'varying vec2 vPos;',
+      'void main() {',
+      '  vColor = color;',
+      '  vPos = position;',
+      '  gl_Position = vec4(position * 2. - 1., 0.0, 1.0);',
+      '}'
+      ].join('\n');
+
+    var fragmentShader = [
+      'precision highp float;',
+      'uniform float time;',
+      'varying vec3 vColor;',
+      'varying vec2 vPos;',
+      ShaderLib.noise3d,
+      'float fn() {',
+      '  return snoise(vec3(vPos * 4., time)) + snoise(vec3(vPos * 8., time)) * 0.5 + snoise(vec3(vPos * 16., time)) * 0.25 + snoise(vec3(vPos * 32., time)) * 0.125;',
+      '}',
+      'void main() {',
+      '  float n = fn();',
+      '  gl_FragColor = vec4(vColor * (n * 0.5 + 0.5), 1.);',
+      // '  gl_FragColor = vec4(vColor * (snoise(vec3(vPos * 10., time)) * .5 + .5), 1.);',
+      // '  gl_FragColor = vec4(vec3(n * 0.5 + 0.5), 1.);',
+      '}'
+      ].join('\n');
+
+    var position = new DataBuffer(2, 4, new Float32Array([0,0, 0,1, 1,0, 1,1]));
+
+    var color = new DataBuffer(3, 4);
+    var ca = []; for(var i = 0; i < 12; i++) ca.push(Math.random());
+    color.setData(new Float32Array(ca));
+
+    var program = new Program(vertexShader, fragmentShader, {drawMode: gl.TRIANGLE_STRIP});
+    program.addAttribute('position', 2, gl.FLOAT, position);
+
+    program.addAttribute('color', 3, gl.FLOAT, color);
+    program.addUniform('time', 'f', 0);
+
+    var renderTarget = new RenderTarget(256, 256);
+    program.setRenderTarget(renderTarget, true)
+    
+
+    var vertexShader2 = [
+      'precision highp float;',
+      'attribute vec2 position;',
+      'varying vec2 vPos;',
+      'void main() {',
+      '  vPos = position;',
+      '  gl_Position = vec4(position * 2. - 1., 0.0, 1.0);',
+      '}'
+      ].join('\n');
+
+    var fragmentShader2 = [
+      'precision highp float;',
+      'uniform sampler2D colorTexture;',
+      'varying vec2 vPos;',
+      'void main() {',
+      '  gl_FragColor = vec4(texture2D(colorTexture, vPos).xyz, 1.);',
+      '}'
+      ].join('\n');
+      
+    var program2 = new Program(vertexShader2, fragmentShader2, {drawMode: gl.TRIANGLE_STRIP});
+
+    program2.addAttribute('position', 2, gl.FLOAT, position);
+    
+    var s = 256;
+    // ca = []; for(var i = 0; i < s * s * 4; i++) ca.push(Math.random() + 0.4);
+    var texture = new Texture(s, s, {
+      type: gl.FLOAT,
+      magFilter: gl.LINEAR,
+      minFilter: gl.LINEAR,
+      glTexture: renderTarget.getGlTexture()
+    });
+    
+    program2.addUniform('colorTexture', 't', texture.glTexture);
+    program2.setViewport((window.innerWidth - window.innerHeight), 0, window.innerHeight * 2, window.innerHeight * 2);
+
+    var time = 0;
+    function animate() {
+      time += 0.005;
+      program.setUniform('time', time);
+      program.draw(0, 4);
+      program2.draw(0, 4);
+      requestAnimationFrame(animate);
+    }
+    animate();
+    
+  </script>
+
+</body>
+</html>

@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+  <title>webgl</title>
+  <meta charset='utf-8'>
+  <meta name='viewport' content='width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0'>
+  <style>
+  body {
+    background-color: #000000;
+    margin: 0px;
+    overflow: hidden;
+    font-family:Monospace;
+    font-size:13px;
+    text-align:center;
+    font-weight: bold;
+    text-align:center;
+  }
+  canvas {}
+
+  </style>
+</head>
+<body>
+  <canvas id="canvas"></canvas>
+
+  <script src='../lib/dat.gui.min.js'></script>
+  <script src='../../src/program.js'></script>
+  <script src='../../src/databuffer.js'></script>
+  <script src='../../src/indexbuffer.js'></script>
+  <script src='../../src/rendertarget.js'></script>
+  <script src='../../src/texture.js'></script>
+  <script src='../../src/utils.js'></script>
+  <script src='../../src/shaderlib.js'></script>
+  <script src='terrain_program.js'></script>
+  <script src='terrain_visualizer.js'></script>
+
+  <script>
+    var canvas = document.getElementById('canvas');
+    var devicePixelRatio = window.devicePixelRatio || 1;
+    var w = window.innerWidth;
+    var h = window.innerHeight;
+    canvas.width = w * devicePixelRatio;
+    canvas.height = h * devicePixelRatio;
+    canvas.style.width = canvas.style.height = '100%';
+    var gl = canvas.getContext('experimental-webgl');
+    Program.init(gl);
+
+    var width, height;
+    width = height = 1024;
+    var terrainGen = new TerrainGenerator(width, height);
+    var terrainVis = new TerrainVisualizer(width, height, w * devicePixelRatio, h * devicePixelRatio);
+
+    var gui = new dat.GUI();    
+    var folder = gui.addFolder('Visualization');
+    folder.add(terrainVis.params, 'renderTerrain');
+    folder.add(terrainVis.params, 'renderWater');
+    folder.add(terrainVis.params, 'lightness');
+    folder.add(terrainVis.params, 'colorScale');
+    folder.add(terrainVis.params, 'waterVisDepth');
+    folder.addColor(terrainVis.params, 'waterColor').onChange(function (value) {
+      if (typeof(value) == 'string') return;
+      terrainVis.params.waterColorF[0] = value[0]/255;
+      terrainVis.params.waterColorF[1] = value[1]/255;
+      terrainVis.params.waterColorF[2] = value[2]/255;
+    });
+    folder.add(terrainVis.params, 'waterAlpha').onChange(function (value) {
+      terrainVis.params.waterColorF[3] = value;
+    });
+    folder = gui.addFolder('Thermal Erosion');
+    folder.add(terrainGen.params, 'thermalEnabled');
+    folder.add(terrainGen.params, 'thermalTimeDelta');
+    folder.add(terrainGen.params, 'talusAngle');
+    folder = gui.addFolder('Hydrolic Erosion');
+    folder.add(terrainGen.params, 'hydraulicEnabled');
+    folder.add(terrainGen.params, 'hydraulicTimeDelta');
+    folder.add(terrainGen.params, 'rain');
+    folder.add(terrainGen.params, 'evaporation');
+    folder.add(terrainGen.params, 'minCapacity');
+    folder.add(terrainGen.params, 'waterDepthFalloff');
+    folder.add(terrainGen.params, 'sedimentErosion');
+    folder.add(terrainGen.params, 'sedimentDeposition');
+    folder = gui.addFolder('Initial Terrain');
+    folder.add(terrainGen.params, 'baseFreq');
+    folder.add(terrainGen.params, 'baseAmp');
+    folder.add(terrainGen.params, 'noiseX');
+    folder.add(terrainGen.params, 'noiseY');
+    folder.add(terrainGen, 'generate');
+    
+    var time = 0, count = 0;
+    var rm = Matrix.makeYRotation(0);
+    var sm = Matrix.makeScale(2, 2, 2);
+    var tm = Matrix.makeLookAt([0, 3, 5], [0, 0, 0], [0, 1, 0]);
+    var matrix = [];
+    Matrix.multiply(matrix, sm, rm, tm);
+
+    terrainGen.generate();
+    animate();
+    
+    function animate() {
+      time += 0.0005;
+      count++;
+
+      Matrix.setYRotation(rm, time);
+      Matrix.multiply(matrix, sm, rm, tm);
+      
+      terrainGen.step();
+      if (terrainVis.params.renderTerrain) {
+        terrainVis.renderTerrain(matrix, terrainGen.erosionTarget.getGlTexture());
+      }
+      if (terrainVis.params.renderWater) {
+        terrainVis.renderWater(matrix, terrainGen.erosionTarget.getGlTexture());
+      }
+      
+      requestAnimationFrame(animate);
+    }
+
+    
+    var can = document.querySelector('canvas');
+    var zoom = 0, spin = 2, down = false;
+    window.addEventListener('mousewheel', function (e) {
+      e.preventDefault();
+      zoom += e.wheelDeltaY * 0.002;
+      tm = Matrix.makeLookAt([0, 3, 5 + zoom], [0, 0, 0], [0, 1, 0]);
+    }, false);
+
+    window.addEventListener("mousedown", function(e) {
+      if (e.target == can){
+        down = e.y;
+      }
+    }, false);
+    window.addEventListener("mousemove", function(e) {
+      if (down) {
+        spin -= (e.y - down) * 0.002;
+        down = e.y;
+        Matrix.setScale(sm, spin, spin, spin);
+      }
+    }, false);
+    window.addEventListener("mouseup", function() {
+      down = 0;
+    }, false);
+  </script>
+
+</body>
+</html>

@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+  <title>webgl</title>
+  <meta charset='utf-8'>
+  <meta name='viewport' content='width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0'>
+  <style>
+  body {
+    background-color: #000000;
+    margin: 0px;
+    overflow: hidden;
+    font-family:Monospace;
+    font-size:13px;
+    text-align:center;
+    font-weight: bold;
+    text-align:center;
+  }
+
+  </style>
+</head>
+<body>
+  <canvas id="canvas" width="500" height="500"></canvas>
+
+  <script src='../src/program.js'></script>
+  <script src='../src/databuffer.js'></script>
+  <script src='../src/indexbuffer.js'></script>
+  <script src='../src/rendertarget.js'></script>
+  <script src='../src/texture.js'></script>
+  <script src='../src/shaderlib.js'></script>
+  <script src='../src/utils.js'></script>
+
+  <script>
+    var canvas = document.getElementById('canvas');
+    var devicePixelRatio = window.devicePixelRatio || 1;
+    var width = window.innerWidth;
+    var height = window.innerHeight;
+    canvas.width = width * devicePixelRatio;
+    canvas.height = height * devicePixelRatio;
+    canvas.style.width = canvas.style.height = '100%';
+    var gl = canvas.getContext('webgl');
+    Program.init(gl);
+
+    var vertexShader = [
+      'precision highp float;',
+      'uniform mat4 mvMatrix;',
+      'uniform mat4 pMatrix;',
+      'attribute vec3 position;',
+      'attribute vec3 color;',
+      'varying vec3 vColor;',
+      'void main() {',
+      '  vColor = color;',
+      '  vec4 mvPos = mvMatrix * vec4(position, 1.);',
+      '  gl_PointSize = 20. * (10. / length(mvPos.xyz));',
+      '  gl_Position = pMatrix * mvPos;',
+      '}'
+      ].join('\n');
+
+    var fragmentShader = [
+      'precision highp float;',
+      'uniform sampler2D sprite;',
+      'varying vec3 vColor;',
+      'void main() {',
+      '  gl_FragColor = vec4(vColor * texture2D(sprite, gl_PointCoord).xyz, .8);',
+      '}'
+      ].join('\n');
+      
+    var program = new Program(vertexShader, fragmentShader, {
+      blendEnabled: true,
+      depthTest: false,
+      drawMode: gl.POINTS,
+      viewport: {x: 0, y: 0, w: width * 2, h: height * 2}
+    });
+    
+    var position = new DataBuffer(3, 1000, new Float32Array(getGrid(10)));
+    var color = new DataBuffer(3, 1000);
+    var ca = []; for (var i = 0; i < 3000; i++) ca.push(Math.random());
+    color.setData(new Float32Array(ca));
+    
+    var particleTex = new Texture(64, 64, {
+      magFilter: gl.LINEAR,
+      minFilter: gl.LINEAR_MIPMAP_NEAREST,
+      image: 'lib/star.png'
+    });
+
+    program.addAttribute('position', 3, gl.FLOAT, position);
+    program.addAttribute('color', 3, gl.FLOAT, color);
+    
+    program.addUniform('pMatrix', 'm4');
+    program.addUniform('mvMatrix', 'm4');
+    program.addUniform('sprite', 't', particleTex.glTexture);
+    
+    var angle = 0, m =[];
+    var rm = Matrix.makeYRotation(angle);
+    // var sm = Matrix.makeScale(0.5, 0.5, 0.5);
+    var tm = Matrix.makeTranslation(0, 0, -10);
+    var pm = Matrix.makePerspective(1, width / height, 0, 1000);
+    
+    program.setUniform('pMatrix', pm);
+    
+    function animate() {
+      angle += 0.001;
+      Matrix.setYRotation(rm, angle);
+      Matrix.multiply(m, rm, tm);
+
+      program.setUniform('mvMatrix', m);
+      program.draw(0, 1000);
+      
+      requestAnimationFrame(animate);
+    }
+    animate();
+    
+    function getGrid(size) {
+      var s2 = size / 2;
+      var verts = [];
+      for (var i = -s2 + 0.5; i < s2; i++) {
+        for (var j = -s2 + 0.5; j < s2; j++) {
+          for (var k = -s2 + 0.5; k < s2; k++) {
+            verts.push(i, j, k);
+          }
+        }
+      }
+      // console.log(verts)
+      return verts;
+    }
+  </script>
+
+</body>
+</html>
