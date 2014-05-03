@@ -150,7 +150,7 @@ var TerrainVisualizer;
       blendEnabled: true,
       // depthTest: true,
       // blendEquation: gl.MAX,
-      blendFunc: [gl.ONE_MINUS_SRC_ALPHA, gl.ONE]
+      // blendFunc: [gl.ONE_MINUS_SRC_ALPHA, gl.ONE]
     });
     
     var pm = Matrix.makePerspective(.8, viewWidth / viewHeight, .1, 1000);
@@ -176,10 +176,10 @@ var TerrainVisualizer;
     this.params = {
       lightness: 0.2,
       colorScale: 5,
-      waterVisDepth: 0.001,
-      waterColor: [0, 75, 150],
-      waterAlpha: .3,
-      waterColorF: [0, .3, .6, .3],
+      waterVisDepth: 0.004,
+      waterColor: [0, 75, 180],
+      waterAlpha: .65,
+      waterColorF: [0, .3, .7, .65],
       renderWater: true,
       renderTerrain: true
     };
