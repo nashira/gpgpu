@@ -252,7 +252,6 @@ var TerrainGenerator;
     '}'
   ].join('\n');
   
-  var timeDelta = 0.05;
   
   TerrainGenerator = function (width, height) {
     var position = new DataBuffer(2, 4, new Float32Array([0,0, 0,1, 1,0, 1,1]));
@@ -267,17 +266,18 @@ var TerrainGenerator;
     
     function newProgram(fs) {
       fs = fs.replace(/#\{size\}/g, width);
-      fs = fs.replace(/#\{timeDelta\}/g, timeDelta);
       var p = new Program(vertexShader, fs, {
         drawMode: gl.TRIANGLE_STRIP, viewport: {x:0,y:0,w:width,h:height}});
       p.addAttribute('position', 2, gl.FLOAT, position);
-      p.addUniform('timeDelta', 'f', timeDelta);
+      p.addUniform('timeDelta', 'f');
       return p;
     }
 
     this.genProgram = newProgram(fragmentShader);
-    this.genProgram.addUniform('baseFreq', 'f')
-    this.genProgram.addUniform('baseAmp', 'f')
+    this.genProgram.addUniform('baseFreq', 'f');
+    this.genProgram.addUniform('baseAmp', 'f');
+    this.genProgram.addUniform('noiseX', 'f');
+    this.genProgram.addUniform('noiseY', 'f');
     
     this.thermal1Program = newProgram(thermal1FS);
     this.thermal1Program.addUniform('erosion', 't');
@@ -337,17 +337,22 @@ var TerrainGenerator;
       noiseX: 0,
       noiseY: 0,
       thermalEnabled: true,
-      hydrolicEnabled: true
+      hydraulicEnabled: true,
+      thermalTimeDelta: 0.05,
+      hydraulicTimeDelta: 0.05
     }
   }
   
   TerrainGenerator.init = function () {}
   
   TerrainGenerator.prototype = {
+    
     generate: function () {
       this.genProgram.setRenderTarget(this.tmpRenderTarget);
       this.genProgram.setUniform('baseFreq', this.params.baseFreq);
       this.genProgram.setUniform('baseAmp', this.params.baseAmp);
+      this.genProgram.setUniform('noiseX', this.params.noiseX);
+      this.genProgram.setUniform('noiseY', this.params.noiseY);
       this.genProgram.draw(0, 4);
       this.swapTargets('tmpRenderTarget', 'erosionTarget');
     },
@@ -361,6 +366,7 @@ var TerrainGenerator;
     
     thermal1: function () {
       this.thermal1Program.setRenderTarget(this.tmpRenderTarget);
+      this.thermal1Program.setUniform('timeDelta', this.params.thermalTimeDelta);
       this.thermal1Program.setUniform('erosion', this.erosionTarget.getGlTexture());
       this.thermal1Program.setUniform('talusAngle', this.params.talusAngle * this.coordDelta);
       this.thermal1Program.draw(0, 4);
@@ -369,6 +375,7 @@ var TerrainGenerator;
     
     thermal2: function () {
       this.thermal2Program.setRenderTarget(this.tmpRenderTarget);
+      this.thermal2Program.setUniform('timeDelta', this.params.thermalTimeDelta);
       this.thermal2Program.setUniform('erosion', this.erosionTarget.getGlTexture());
       this.thermal2Program.setUniform('thermal', this.thermalTarget.getGlTexture());
       this.thermal2Program.draw(0, 4);
@@ -377,6 +384,7 @@ var TerrainGenerator;
     
     computeFlux: function () {
       this.fluxProgram.setRenderTarget(this.tmpRenderTarget);
+      this.fluxProgram.setUniform('timeDelta', this.params.hydraulicTimeDelta);
       this.fluxProgram.setUniform('erosion', this.erosionTarget.getGlTexture());
       this.fluxProgram.setUniform('oldFlux', this.fluxTarget.getGlTexture());
       this.fluxProgram.draw(0, 4);
@@ -388,6 +396,7 @@ var TerrainGenerator;
       this.wrapTexture.glTexture = this.fluxTarget.getGlTexture();
       this.wrapTexture.applyParameters();
       this.waterLevelProgram.setRenderTarget(this.tmpRenderTarget);
+      this.waterLevelProgram.setUniform('timeDelta', this.params.hydraulicTimeDelta);
       this.waterLevelProgram.setUniform('erosion', this.erosionTarget.getGlTexture());
       this.waterLevelProgram.setUniform('flux', this.fluxTarget.getGlTexture());
       this.waterLevelProgram.draw(0, 4);
@@ -397,6 +406,7 @@ var TerrainGenerator;
     
     waterVelocity: function () {
       this.velocityProgram.setRenderTarget(this.tmpRenderTarget);
+      this.velocityProgram.setUniform('timeDelta', this.params.hydraulicTimeDelta);
       this.velocityProgram.setUniform('flux', this.fluxTarget.getGlTexture());
       this.velocityProgram.draw(0, 4);
       this.swapTargets('tmpRenderTarget', 'velocityTarget');
@@ -404,6 +414,7 @@ var TerrainGenerator;
     
     erosionDeposition: function () {
       this.erosionProgram.setRenderTarget(this.tmpRenderTarget);
+      this.erosionProgram.setUniform('timeDelta', this.params.hydraulicTimeDelta);
       this.erosionProgram.setUniform('erosion', this.erosionTarget.getGlTexture());
       this.erosionProgram.setUniform('velocity', this.velocityTarget.getGlTexture());
       this.erosionProgram.setUniform('minCapacity', this.params.minCapacity);
@@ -418,6 +429,7 @@ var TerrainGenerator;
       this.linearTexture.glTexture = this.erosionTarget.getGlTexture();
       this.linearTexture.applyParameters();
       this.sedimentProgram.setRenderTarget(this.tmpRenderTarget);
+      this.sedimentProgram.setUniform('timeDelta', this.params.hydraulicTimeDelta);
       this.sedimentProgram.setUniform('erosion', this.erosionTarget.getGlTexture());
       this.sedimentProgram.setUniform('velocity', this.velocityTarget.getGlTexture());
       this.sedimentProgram.setUniform('evaporation', this.params.evaporation);
@@ -439,7 +451,7 @@ var TerrainGenerator;
         this.thermal1();
         this.thermal2();
       }
-      if (this.params.hydrolicEnabled) {
+      if (this.params.hydraulicEnabled) {
         this.computeFlux();
         this.waterLevel();
         this.waterVelocity();

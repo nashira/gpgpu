@@ -22,7 +22,7 @@
 <body>
   <canvas id="canvas"></canvas>
 
-  <script src='../lib/stats.min.js'></script>
+  <script src='../lib/dat.gui.min.js'></script>
   <script src='../../src/program.js'></script>
   <script src='../../src/databuffer.js'></script>
   <script src='../../src/indexbuffer.js'></script>
@@ -31,236 +31,112 @@
   <script src='../../src/utils.js'></script>
   <script src='../../src/shaderlib.js'></script>
   <script src='terrain_program.js'></script>
+  <script src='terrain_visualizer.js'></script>
 
   <script>
     var canvas = document.getElementById('canvas');
     var devicePixelRatio = window.devicePixelRatio || 1;
-    var width = window.innerWidth;
-    var height = window.innerHeight;
-    canvas.width = width * devicePixelRatio;
-    canvas.height = height * devicePixelRatio;
+    var w = window.innerWidth;
+    var h = window.innerHeight;
+    canvas.width = w * devicePixelRatio;
+    canvas.height = h * devicePixelRatio;
     canvas.style.width = canvas.style.height = '100%';
     var gl = canvas.getContext('experimental-webgl');
     Program.init(gl);
-    TerrainGenerator.init(gl);
 
-    var vertexShader = [
-      'precision highp float;',
-      'uniform mat4 mvMatrix;',
-      'uniform mat4 pMatrix;',
-      'uniform sampler2D erosion;',
-      'attribute vec2 coords;',
-      'const float cDelta = 1. / #{size}.;',
+    var width, height;
+    width = height = 1024;
+    var terrainGen = new TerrainGenerator(width, height);
+    var terrainVis = new TerrainVisualizer(width, height, w * devicePixelRatio, h * devicePixelRatio);
 
-      'varying vec3 vNormal;',
-      'varying vec3 vWorldPos;',
-      'varying vec4 vData;',
-
-      'vec3 getNormal(vec2 coord) {',
-      '  float h1 = texture2D(erosion, coord + vec2(-cDelta, 0.)).x;',
-      '  float h2 = texture2D(erosion, coord + vec2(cDelta, 0)).x;',
-      '  float h3 = texture2D(erosion, coord + vec2(0., cDelta)).x;',
-      '  float h4 = texture2D(erosion, coord + vec2(0., -cDelta)).x;',
-    
-      '  vec3 c1 = vec3(coord.x - cDelta, h1, coord.y) - vec3(coord.x + cDelta, h2, coord.y);',
-      '  vec3 c2 = vec3(coord.x, h3, coord.y + cDelta) - vec3(coord.x, h4, coord.y - cDelta);',
-    
-      '  return normalize(cross(c1, c2));',
-      '}',
-      
-      'void main() {',
-      '  vec4 vertex = texture2D(erosion, coords);',
-      '  vNormal = getNormal(coords);',
-      '  vec3 pos = vec3(coords.x - .5, vertex.x + vertex.y, coords.y - .5);',
-      '  vec4 wPos = mvMatrix * vec4(pos, 1.);',
-      '  vWorldPos = wPos.xyz;',
-      '  vData = vertex;',
-      '  gl_Position = pMatrix * wPos;',
-      '}'
-      ].join('\n');
-    
-    
-    var fragmentShader = [
-      'precision highp float;',
-      'uniform float time;',
-      'uniform float lightness;',
-      'uniform float colorScale;',
-      
-      'uniform mat4 mvMatrix;',
-      'uniform float drawWater;',
-      
-      'varying vec3 vWorldPos;',
-      'varying vec3 vNormal;',
-      'varying vec4 vData;',
-
-      // 'const vec3 light_direction = vec3(0.24, -0.97, 0.);',
-      'const vec3 light_direction = vec3(0.0, -1., 0.);',
-      // 'const vec3 light_direction = vec3(0., -0.894427, 0.447214);',
-      // 'const vec4 light_diffuse = vec4(0.8, 0.8, 0.8, 0.0);',
-      'const vec4 light_diffuse = vec4(1., 1., 1., 1.0);',
-      'const vec4 light_ambient = vec4(0.2, 0.2, 0.3, 1.0);',
-      'const vec4 light_specular = vec4(1.0, 1.0, 1.0, 1.0);',
-      
-      'const vec3 sand = vec3(.75, .66, .47);',
-      // 'const vec3 grass = vec3(.34, .37, .15);',
-      'const vec3 grass = vec3(.22, .32, .05);',
-      'const vec3 rock = vec3(.37, .30, .25);',
-      'const vec3 snow = vec3(.95, .95, .99);',
-      
-      'void main() {',
-      '  float height = max(0., vData.x) * colorScale;',
-      '  vec4 weights;',
-      '  weights.x = clamp(1. - abs(height - 0.0) * 5., 0., 1.);',
-      '  weights.y = clamp(1. - abs(height - 0.3) * 4., 0., 1.);',
-      '  weights.z = clamp(1. - abs(height - 0.6) * 4., 0., 1.);',
-      '  weights.w = clamp(1. - abs(height - 0.9) * 4., 0., 1.);',
-      '  weights /= (weights.x + weights.y + weights.z + weights.w - lightness);',
-      '  vec3 color = sand * weights.x + grass * weights.y + rock * weights.z + snow * weights.w;',
-      
-      'vec3 mv_light_direction = normalize((mvMatrix * vec4(light_direction, 0.0)).xyz);',
-      'vec3 eye = normalize(vWorldPos);',
-      'vec3 reflection = reflect(mv_light_direction, vNormal);',
-      // // 'vec4 frag_diffuse = vec4(.1);',
-      // 
-      // '  vec3 color = mix(vec3(.86,.57,.34), vec3(1.), vData.x * 10. + .2);',
-
-      '  if (vData.y > .001) {',
-      '    color = mix(color, vec3(0., .25, .55), vData.y * 40.);',
-      '  }',
-
-      'vec4 frag_diffuse = vec4(color, 1.);',
-      'vec4 diffuse_factor = max(-dot(vNormal, mv_light_direction), 0.0) * light_diffuse;',
-      'vec4 ambient_diffuse_factor = diffuse_factor + light_ambient;',
-      // 'vec4 specular_factor = max(pow(-dot(reflection, eye), vNormal.y * vNormal.y), 0.0) * light_specular;',
-      // 'gl_FragColor = specular_factor * vec4(.1) + ambient_diffuse_factor * frag_diffuse;',
-      
-      'gl_FragColor = ambient_diffuse_factor * frag_diffuse;',
-      // 'gl_FragColor = frag_diffuse;',
-      
-      '}'
-      ].join('\n');
-
-    
-    var w = 1024, h = 1024;
-    var terrainGen = new TerrainGenerator(w, h);
-
-    vertexShader = vertexShader.replace(/#\{size\}/g, w);
-    var program = new Program(vertexShader, fragmentShader, {
-      drawMode: gl.TRIANGLE_STRIP,
-      // drawMode: gl.LINE_STRIP,
-      cullFace: gl.BACK,
-      // blendEnabled: true,
-      // blendFunc: [gl.SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA]
+    var gui = new dat.GUI();    
+    var folder = gui.addFolder('Visualization');
+    folder.add(terrainVis.params, 'renderTerrain');
+    folder.add(terrainVis.params, 'renderWater');
+    folder.add(terrainVis.params, 'lightness');
+    folder.add(terrainVis.params, 'colorScale');
+    folder.add(terrainVis.params, 'waterVisDepth');
+    folder.addColor(terrainVis.params, 'waterColor').onChange(function (value) {
+      if (typeof(value) == 'string') return;
+      terrainVis.params.waterColorF[0] = value[0]/255;
+      terrainVis.params.waterColorF[1] = value[1]/255;
+      terrainVis.params.waterColorF[2] = value[2]/255;
     });
-
-    buildGeo(w, h);
-    var num = (2 * w) * (h - 1) + 3 * (h - 1);
+    folder.add(terrainVis.params, 'waterAlpha').onChange(function (value) {
+      terrainVis.params.waterColorF[3] = value;
+    });
+    folder = gui.addFolder('Thermal Erosion');
+    folder.add(terrainGen.params, 'thermalEnabled');
+    folder.add(terrainGen.params, 'thermalTimeDelta');
+    folder.add(terrainGen.params, 'talusAngle');
+    folder = gui.addFolder('Hydrolic Erosion');
+    folder.add(terrainGen.params, 'hydraulicEnabled');
+    folder.add(terrainGen.params, 'hydraulicTimeDelta');
+    folder.add(terrainGen.params, 'rain');
+    folder.add(terrainGen.params, 'evaporation');
+    folder.add(terrainGen.params, 'minCapacity');
+    folder.add(terrainGen.params, 'waterDepthFalloff');
+    folder.add(terrainGen.params, 'sedimentErosion');
+    folder.add(terrainGen.params, 'sedimentDeposition');
+    folder = gui.addFolder('Initial Terrain');
+    folder.add(terrainGen.params, 'baseFreq');
+    folder.add(terrainGen.params, 'baseAmp');
+    folder.add(terrainGen.params, 'noiseX');
+    folder.add(terrainGen.params, 'noiseY');
+    folder.add(terrainGen, 'generate');
     
-    program.addUniform('erosion', 't');
-    program.addUniform('time', 'f', 0);
-    program.addUniform('lightness', 'f');
-    program.addUniform('colorScale', 'f');
-    program.setViewport(0, 0, width * devicePixelRatio, height * devicePixelRatio);
-
+    var time = 0, count = 0;
     var rm = Matrix.makeYRotation(0);
-    var sm = Matrix.makeScale(2,2,2);
-    var tm = Matrix.makeLookAt([0, 1.5, 3.7], [0, 0, 0], [0, 1, 0]);
-    // var tm = Matrix.makeLookAt([0, 8, 20], [0, 0, 0], [0, 1, 0]);
-    var pm = Matrix.makePerspective(.8, width / height, .1, 1000);
+    var sm = Matrix.makeScale(2, 2, 2);
+    var tm = Matrix.makeLookAt([0, 3, 5], [0, 0, 0], [0, 1, 0]);
     var matrix = [];
     Matrix.multiply(matrix, sm, rm, tm);
-    
-    program.addUniform('pMatrix', 'm4', pm);
-    program.addUniform('mvMatrix', 'm4', matrix);
-    
-    var params = {
-      lightness: 0.2,
-      colorScale: 5,
-    }
-
-    var time = 0, count = 0;
-    function animate() {
-      time += 0.0005;
-      count++;
-      program.setUniform('time', time/100);
-
-      Matrix.setYRotation(rm, time);
-      Matrix.multiply(matrix, sm, rm, tm);
-      program.setUniform('mvMatrix', matrix);
-      
-      terrainGen.step();
-      
-      // program.setUniform('flux', terrainGen.fluxTarget.getGlTexture());
-      program.setUniform('erosion', terrainGen.erosionTarget.getGlTexture());
-      program.setUniform('lightness', params.lightness);
-      program.setUniform('colorScale', params.colorScale);
-      program.draw(0, num);
-      requestAnimationFrame(animate);
-    }
 
     terrainGen.generate();
     animate();
     
-    var zoom = 0, spin = 0, down = false;
+    function animate() {
+      time += 0.0005;
+      count++;
+
+      Matrix.setYRotation(rm, time);
+      Matrix.multiply(matrix, sm, rm, tm);
+      
+      terrainGen.step();
+      if (terrainVis.params.renderTerrain) {
+        terrainVis.renderTerrain(matrix, terrainGen.erosionTarget.getGlTexture());
+      }
+      if (terrainVis.params.renderWater) {
+        terrainVis.renderWater(matrix, terrainGen.erosionTarget.getGlTexture());
+      }
+      
+      requestAnimationFrame(animate);
+    }
+
+    
+    var can = document.querySelector('canvas');
+    var zoom = 0, spin = 2, down = false;
     window.addEventListener('mousewheel', function (e) {
+      e.preventDefault();
       zoom += e.wheelDeltaY * 0.002;
-      tm = Matrix.makeLookAt([spin, 1.5, 3.7 + zoom], [0, 0, 0], [0, 1, 0]);
+      tm = Matrix.makeLookAt([0, 3, 5 + zoom], [0, 0, 0], [0, 1, 0]);
     }, false);
 
     window.addEventListener("mousedown", function(e) {
-        down = e.x;
+      if (e.target == can){
+        down = e.y;
+      }
     }, false);
     window.addEventListener("mousemove", function(e) {
-      // if (down) {
-      //   spin += (e.x - down) * 0.001;
-      //   tm = Matrix.makeLookAt([spin, 1.5, 3.7 + zoom], [0, 0, 0], [0, 1, 0]);
-      // }
+      if (down) {
+        spin -= (e.y - down) * 0.002;
+        down = e.y;
+        Matrix.setScale(sm, spin, spin, spin);
+      }
     }, false);
     window.addEventListener("mouseup", function() {
       down = 0;
     }, false);
-    
-    function buildGeo(w, h) {
-      var w1 = w - 1;
-      var h1 = h - 1;
-
-      var i, j, y, y1, d = true;
-      var numVerts = w * h;
-      var vertecies = [];
-      var indecies = [];
-      var sx = 1 / w ;
-      var sy = 1 / h;
-      
-      for (i = 0; i < h; i++) {
-        for (j = 0; j < w; j++) {
-          var x = sx * j + sx * 0.5;
-          var y = sy * i + sy * 0.5;
-          vertecies.push(x, y);
-        }
-      }
-
-      for (i = 0; i < h1; i++) {
-        y = i * w;
-        y1 = y + w;
-        if (d) {
-          for (j = 0; j < w; j++) {
-            indecies.push(y+j, y1+j);
-          }
-          indecies.push(y1+w1, y1+w1, y1+w1);
-        } else {
-          for (j = w1; j >= 0; j--) {
-            indecies.push(y+j, y1+j);
-          }
-          indecies.push(y1, y1, y1);
-        }
-        d = !d;
-      }
-      
-      var position = new DataBuffer(2, numVerts, new Float32Array(vertecies));
-      program.addAttribute('coords', 2, gl.FLOAT, position);
-      var indecies = new IndexBuffer(4, num, new Uint32Array(indecies), gl.UNSIGNED_INT);
-      program.setIndexBuffer(indecies);
-    }
   </script>
 
 </body>

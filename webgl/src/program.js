@@ -18,6 +18,7 @@ var Program;
     this.blendFunc = params.blendFunc || [gl.SRC_ALPHA, gl.ONE];
     this.drawMode = 'drawMode' in params ? params.drawMode : gl.TRIANGLES;
     this.cullFace = 'cullFace' in params ? params.cullFace : null;
+    this.depthTest = 'depthTest' in params ? params.depthTest : true;
     // this.drawFirst = 0;
     // this.drawCount = 0;
   
@@ -210,7 +211,6 @@ var Program;
     
     if (this.blendEnabled) {
       gl.enable(gl.BLEND);
-      gl.disable(gl.DEPTH_TEST);
       if (this.blendEquation.length) {
         gl.blendEquationSeparate(this.blendEquation[0], this.blendEquation[1]);
       } else {
@@ -223,7 +223,12 @@ var Program;
       }
     } else {
       gl.disable(gl.BLEND);
+    }
+    
+    if (this.depthTest) {
       gl.enable(gl.DEPTH_TEST);
+    } else {
+      gl.disable(gl.DEPTH_TEST);
     }
     
     if (this.cullFace != null) {
