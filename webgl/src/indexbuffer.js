@@ -16,8 +16,8 @@ var IndexBuffer;
   }
 
   IndexBuffer.prototype.setData = function (data) {
-		gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.glBuffer);
-		gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, data, gl.STATIC_DRAW);
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.glBuffer);
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, data, gl.STATIC_DRAW);
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
   }
 }());

@@ -50,9 +50,9 @@ var Program;
     RenderTarget.init(gl);
     Texture.init(gl);
     
-		gl.getExtension('OES_texture_float');
-		gl.getExtension('OES_texture_float_linear');
-		gl.getExtension('OES_standard_derivatives');
+    gl.getExtension('OES_texture_float');
+    gl.getExtension('OES_texture_float_linear');
+    gl.getExtension('OES_standard_derivatives');
     gl.getExtension('OES_element_index_uint');
   }
 
@@ -169,7 +169,7 @@ var Program;
         break; case 'v4':
           gl.uniform4f(uni.location, uni.value[0], uni.value[1], uni.value[2], uni.value[3]);
         break; case 'm4':
-  				gl.uniformMatrix4fv(uni.location, false, uni.value);
+          gl.uniformMatrix4fv(uni.location, false, uni.value);
         break; case 't':
           var unit = textureCount++;
           gl.activeTexture(gl.TEXTURE0 + unit);
