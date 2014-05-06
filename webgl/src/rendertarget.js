@@ -23,8 +23,8 @@ var RenderTarget;
     this.framebuffer = gl.createFramebuffer();
     // this.renderbuffer = gl.createRenderbuffer();
 
-  	gl.bindFramebuffer(gl.FRAMEBUFFER, this.framebuffer);
-  	gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this.texture.glTexture, 0);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this.framebuffer);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this.texture.glTexture, 0);
   
     // gl.bindRenderbuffer(gl.RENDERBUFFER, this.renderbuffer);
     // gl.renderbufferStorage(gl.RENDERBUFFER, gl.RGBA4, this.width, this.height)
