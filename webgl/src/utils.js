@@ -13,8 +13,7 @@ var Utils, Matrix;
       }
     }
     // console.log('getTextureIndecies', data);
-    var db = new DataBuffer(2, width * height);
-    db.setData(new Float32Array(data));
+    var db = new DataBuffer(2, width * height, new Float32Array(data));
     return db;
   }
   

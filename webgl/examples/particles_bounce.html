@@ -177,9 +177,8 @@
     program2.addUniform('pos', 't', rt1.getGlTexture());
     
     var coords = Utils.getTextureIndecies(dim, dim);
-    var color = new DataBuffer(3, num);
     var ca = []; for (var i = 0; i < num * 3; i++) ca.push(Math.random());
-    color.setData(new Float32Array(ca));
+    var color = new DataBuffer(3, num, new Float32Array(ca));
     
     program2.addAttribute('coords', 2, gl.FLOAT, coords);
     program2.addAttribute('color', 3, gl.FLOAT, color);
