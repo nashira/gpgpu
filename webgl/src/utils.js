@@ -2,7 +2,7 @@ var Utils, Matrix;
 
 (function () {
   Utils = {};
-  
+
   Utils.getTextureIndecies = function (width, height) {
     var data = [];
     var dw = 1 / width;
@@ -16,7 +16,7 @@ var Utils, Matrix;
     var db = new DataBuffer(2, width * height, new Float32Array(data));
     return db;
   }
-  
+
   Utils.loadImage = function (url, onLoad) {
     var cubeImage = new Image();
     cubeImage.onload = function () {
@@ -30,34 +30,68 @@ var Utils, Matrix;
     xhr.onreadystatechange = function () {
       if (xhr.readyState == 4) {
         // console.log(xhr.responseText);
-        if (onload) {
-          onload(xhr.responseText);
+        if (onLoad) {
+          onLoad(xhr.responseText);
         }
       }
     }
     xhr.open('GET', url, true);
     xhr.send();
   }
-  
+
+  Utils.loadShaders = function (urls, onLoad) {
+
+    var results = urls.map(function () {
+      return false;
+    });
+    console.log(urls, results)
+
+    urls.forEach(function (url, index) {
+      var xhr = new XMLHttpRequest();
+
+      xhr.onreadystatechange = function () {
+        if (xhr.readyState == 4) {
+          var text = xhr.responseText;
+          var libre = /\$\{([^}]*)\}/g;
+          var match;
+          while (match = libre.exec(text)) {
+            text = text.replace(match[0], ShaderLib[match[1]]);
+          }
+
+          results[index] = text;
+
+          if (onLoad && results.every(function (r) {
+            return r;
+          })) {
+            onLoad(results);
+          }
+        }
+      }
+
+      xhr.open('GET', url, true);
+      xhr.send();
+    });
+  }
+
   Matrix = {
-    
+
     normal: function (arr) {
       var sqrt = Math.sqrt(arr[0]*arr[0]+arr[1]*arr[1]+arr[2]*arr[2]);
       return [arr[0]/sqrt, arr[1]/sqrt, arr[2]/sqrt];
     },
-    
+
     minus: function (a, b) {
       return [a[0]-b[0], a[1]-b[1], a[2]-b[2]];
     },
-    
+
     dot: function (a, b) {
       return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
     },
-    
+
     cross: function (a, b) {
       return [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
     },
-    
+
     makeLookAt: function (eye, at, up) {
       var zaxis = Matrix.normal(Matrix.minus(eye, at));
       var xaxis = Matrix.normal(Matrix.cross(up, zaxis));
@@ -68,12 +102,12 @@ var Utils, Matrix;
                xaxis[2], yaxis[2], zaxis[2], 0,
               -Matrix.dot(xaxis, eye), -Matrix.dot(yaxis, eye), -Matrix.dot(zaxis, eye), 1];
     },
-    
+
     // taken from html5rocks.com
     makePerspective: function(fieldOfViewInRadians, aspect, near, far) {
       var f = Math.tan(Math.PI * 0.5 - 0.5 * fieldOfViewInRadians);
       var rangeInv = 1.0 / (near - far);
- 
+
       return [
         f / aspect, 0, 0, 0,
         0, f, 0, 0,
@@ -81,7 +115,7 @@ var Utils, Matrix;
         0, 0, near * far * rangeInv * 2, 0
       ];
     },
-    
+
     makeOrthographic: function (width, height, depth) {
       // Note: This matrix flips the Y axis so 0 is at the top.
       return [
@@ -183,7 +217,7 @@ var Utils, Matrix;
       m[5] = sy;
       m[10] = sz;
     },
-    
+
     multiply: function () {
       var m = arguments[1], t = arguments[0];
       for (var i = 1; i < arguments.length; i++) {

@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+  <title>webgl</title>
+  <meta charset='utf-8'>
+  <meta name='viewport' content='width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0'>
+  <style>
+  body {
+    background-color: #000000;
+    margin: 0px;
+    overflow: hidden;
+    font-family:Monospace;
+    font-size:13px;
+    text-align:center;
+    font-weight: bold;
+    text-align:center;
+  }
+
+  </style>
+</head>
+<body>
+  <canvas id="canvas"></canvas>
+
+  <script src='../../src/program.js'></script>
+  <script src='../../src/databuffer.js'></script>
+  <script src='../../src/indexbuffer.js'></script>
+  <script src='../../src/rendertarget.js'></script>
+  <script src='../../src/texture.js'></script>
+  <script src='../../src/shaderlib.js'></script>
+  <script src='../../src/utils.js'></script>
+
+  <script>
+    var canvas = document.getElementById('canvas');
+    var devicePixelRatio = window.devicePixelRatio || 1;
+    canvas.width = window.innerWidth * devicePixelRatio;
+    canvas.height = window.innerHeight * devicePixelRatio;
+    canvas.style.width = canvas.style.height = '100%';
+    var gl = canvas.getContext('webgl');
+    Program.init(gl);
+
+    var vertexShader;
+    var fragmentShader;
+    var size = 128;
+    var program, program2;
+    var coords = Utils.getTextureIndecies(size, size);
+
+    Utils.loadShaders([
+      './update_posv.glsl',
+      './update_posf.glsl',
+      './populate_octreev.glsl',
+      './populate_octreef.glsl'], function (shaders) {
+
+      program = new Program(shaders[0], shaders[1], {drawMode: gl.POINTS});
+      program.addAttribute('coords', 2, gl.FLOAT, coords);
+
+      program.addUniform('time', 'f', 0);
+
+      var renderTarget = new RenderTarget(size, size, {type: gl.FLOAT});
+      program.setRenderTarget(renderTarget, true);
+
+      program2 = new Program(shaders[2], shaders[3], {
+        drawMode: gl.POINTS,
+        blendEnabled: true,
+        depthTest: false,
+        blendFunc: [gl.SRC_ALPHA, gl.ONE]
+      });
+
+      program2.addAttribute('coords', 2, gl.FLOAT, coords);
+
+      program2.addUniform('dataTexture', 't', renderTarget.getGlTexture());
+      var w = window.innerWidth, h = window.innerHeight;
+      // var w = 200, h = 200;
+      program2.setViewport(
+        w - h,
+        0,
+        h * 2,
+        h * 2);
+
+      animate();
+    });
+
+    var time = 0;
+    function animate() {
+      time += 0.0005;
+      program.setUniform('time', time);
+      program.draw(0, coords.numItems);
+      program2.draw(0, coords.numItems);
+      requestAnimationFrame(animate);
+    }
+
+  </script>
+
+</body>
+</html>
