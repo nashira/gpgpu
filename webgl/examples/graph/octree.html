@@ -28,6 +28,7 @@
   <script src='../../src/texture.js'></script>
   <script src='../../src/shaderlib.js'></script>
   <script src='../../src/utils.js'></script>
+  <script src='./octree.js'></script>
 
   <script>
     var canvas = document.getElementById('canvas');
@@ -40,51 +41,65 @@
 
     var vertexShader;
     var fragmentShader;
-    var size = 128;
-    var program, program2;
+    var size = 32;
+    var program, program2, octreeProgram;
     var coords = Utils.getTextureIndecies(size, size);
+    var octree = new Octree();
 
     Utils.loadShaders([
       './update_posv.glsl',
       './update_posf.glsl',
+      './draw_texturev.glsl',
+      './draw_texturef.glsl',
       './populate_octreev.glsl',
       './populate_octreef.glsl'], function (shaders) {
 
       program = new Program(shaders[0], shaders[1], {drawMode: gl.POINTS});
       program.addAttribute('coords', 2, gl.FLOAT, coords);
-
       program.addUniform('time', 'f', 0);
+      var positionTarget = new RenderTarget(size, size, {type: gl.FLOAT});
+      program.setRenderTarget(positionTarget, true);
 
-      var renderTarget = new RenderTarget(size, size, {type: gl.FLOAT});
-      program.setRenderTarget(renderTarget, true);
-
-      program2 = new Program(shaders[2], shaders[3], {
+      octreeProgram = new Program(shaders[4], shaders[5], {
         drawMode: gl.POINTS,
         blendEnabled: true,
         depthTest: false,
         blendFunc: [gl.SRC_ALPHA, gl.ONE]
       });
+      var sizeInfo = octree.getTextureSize(32);
+      console.log('sizeInfo', sizeInfo)
+      var octreeTarget = new RenderTarget(sizeInfo.width, sizeInfo.height, {type: gl.FLOAT});
+      octreeProgram.addUniform('positionTexture', 't', positionTarget.getGlTexture());
+      octreeProgram.addUniform('size', 'f', sizeInfo.size);
+      octreeProgram.addUniform('slicesPerRow', 'f', sizeInfo.slicesPerRow);
+      octreeProgram.addUniform('numRows', 'f', sizeInfo.numRows);
+      octreeProgram.addAttribute('coords', 2, gl.FLOAT, coords);
+      octreeProgram.setRenderTarget(octreeTarget, true);
 
-      program2.addAttribute('coords', 2, gl.FLOAT, coords);
 
-      program2.addUniform('dataTexture', 't', renderTarget.getGlTexture());
-      var w = window.innerWidth, h = window.innerHeight;
-      // var w = 200, h = 200;
+      var position = new DataBuffer(2, 4, new Float32Array([0,0, 0,1, 1,0, 1,1]));
+      program2 = new Program(shaders[2], shaders[3], {drawMode: gl.TRIANGLE_STRIP});
+      program2.addAttribute('position', 2, gl.FLOAT, position);
+
+      program2.addUniform('tex', 't', octreeTarget.getGlTexture());
+      var ww = window.innerWidth * 2, wh = window.innerHeight * 2;
+      var w = wh * 2, h = wh;
       program2.setViewport(
-        w - h,
-        0,
-        h * 2,
-        h * 2);
+        (ww - w) / 2,
+        (wh - h) / 2,
+        w, h);
 
       animate();
     });
 
-    var time = 0;
+    var time = -1;
     function animate() {
-      time += 0.0005;
+      time += 0.0001;
+      if (time > 1) time = -1;
       program.setUniform('time', time);
       program.draw(0, coords.numItems);
-      program2.draw(0, coords.numItems);
+      octreeProgram.draw(0, coords.numItems);
+      program2.draw(0, 4);
       requestAnimationFrame(animate);
     }
 

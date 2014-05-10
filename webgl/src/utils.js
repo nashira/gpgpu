@@ -44,7 +44,6 @@ var Utils, Matrix;
     var results = urls.map(function () {
       return false;
     });
-    console.log(urls, results)
 
     urls.forEach(function (url, index) {
       var xhr = new XMLHttpRequest();

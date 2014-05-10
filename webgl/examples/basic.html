@@ -76,12 +76,9 @@
     color.setData(new Float32Array(ca));
 
     var program = new Program(vertextShader, fragmentShader, {drawMode: gl.TRIANGLE_STRIP});
-    program.addAttribute('position', 2, gl.FLOAT);
-    program.setAttribute('position', position);
+    program.addAttribute('position', 2, gl.FLOAT, position);
+    program.addAttribute('color', 3, gl.FLOAT, color);
 
-    program.addAttribute('color', 3, gl.FLOAT);
-    program.setAttribute('color', color);
-    
     program.addUniform('time', 'f', 0);
     program.setViewport(width - height, 0, height * devicePixelRatio, height * devicePixelRatio);
 

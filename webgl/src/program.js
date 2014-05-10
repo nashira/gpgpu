@@ -1,7 +1,7 @@
 var Program;
 (function () {
   var gl;
-  
+
   Program = function (vertexShader, fragmentShader, params) {
     params = params || {};
     this.attributes = {};
@@ -19,9 +19,10 @@ var Program;
     this.drawMode = 'drawMode' in params ? params.drawMode : gl.TRIANGLES;
     this.cullFace = 'cullFace' in params ? params.cullFace : null;
     this.depthTest = 'depthTest' in params ? params.depthTest : true;
+    this.clear = 'clear' in params ? params.clear : (gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     // this.drawFirst = 0;
     // this.drawCount = 0;
-  
+
     if (vertexShader && fragmentShader) {
       this.buildProgram(vertexShader, fragmentShader);
     }
@@ -49,7 +50,7 @@ var Program;
     IndexBuffer.init(gl);
     RenderTarget.init(gl);
     Texture.init(gl);
-    
+
     gl.getExtension('OES_texture_float');
     gl.getExtension('OES_texture_float_linear');
     gl.getExtension('OES_standard_derivatives');
@@ -74,17 +75,17 @@ var Program;
     gl.attachShader(this.glProgram, vertexShaderId);
     gl.attachShader(this.glProgram, fragmentShaderId);
     gl.linkProgram(this.glProgram);
-  
+
     if (!gl.getProgramParameter(this.glProgram, gl.LINK_STATUS)) {
       console.log('VALIDATE_STATUS', gl.getProgramParameter(this.glProgram, gl.VALIDATE_STATUS));
       console.log('getError', gl.getError());
     }
     console.log('getProgramInfoLog', gl.getProgramInfoLog(this.glProgram));
-  
+
     gl.deleteShader(vertexShaderId);
     gl.deleteShader(fragmentShaderId);
   }
-  
+
   Program.prototype.initAttribute = function (name) {
     if (this.glProgram != null) {
       // gl.useProgram(this.glProgram);
@@ -93,7 +94,7 @@ var Program;
       console.log('initAttribute', name, attr.location);
     }
   }
-  
+
   Program.prototype.initUniform = function (name) {
     if (this.glProgram != null) {
       // gl.useProgram(this.glProgram);
@@ -147,11 +148,11 @@ var Program;
     }
     this.initUniform(name);
   }
-  
+
   Program.prototype.setUniform = function (name, value) {
     this.uniforms[name].value = value;
   }
-  
+
   Program.prototype.loadUniforms = function () {
     var textureCount = 0;
     for (var name in this.uniforms) {
@@ -179,16 +180,16 @@ var Program;
       }
     }
   }
-  
+
   Program.prototype.setIndexBuffer = function (indexBuffer) {
     this.indexBuffer = indexBuffer;
   }
-  
+
   Program.prototype.setRenderTarget = function (renderTarget, setViewport) {
     this.renderTarget = renderTarget;
     this.framebuffer = (renderTarget && renderTarget.framebuffer) || null;
     this.renderbuffer = (renderTarget && renderTarget.renderbuffer) || null;
-  
+
     if (renderTarget && setViewport) {
       this.setViewport(0, 0, renderTarget.width, renderTarget.height);
     }
@@ -205,10 +206,15 @@ var Program;
       gl.bindFramebuffer(gl.FRAMEBUFFER, this.framebuffer);
       // gl.bindRenderbuffer(gl.RENDERBUFFER, this.renderbuffer);
     }
+
     if (this.renderTarget) {
       gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this.renderTarget.getGlTexture(), 0);
     }
-    
+
+    if (this.clear) {
+      gl.clear(this.clear);
+    }
+
     if (this.blendEnabled) {
       gl.enable(gl.BLEND);
       if (this.blendEquation.length) {
@@ -224,26 +230,26 @@ var Program;
     } else {
       gl.disable(gl.BLEND);
     }
-    
+
     if (this.depthTest) {
       gl.enable(gl.DEPTH_TEST);
     } else {
       gl.disable(gl.DEPTH_TEST);
     }
-    
+
     if (this.cullFace != null) {
       gl.enable(gl.CULL_FACE);
       gl.cullFace(this.cullFace);
     } else {
       gl.disable(gl.CULL_FACE);
     }
-  
+
     var vp = this.viewport;
     gl.viewport(vp.x, vp.y, vp.w, vp.h);
 
     this.loadAttributes();
     this.loadUniforms();
-    
+
     if (this.indexBuffer != null) {
       gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer.glBuffer);
       gl.drawElements(this.drawMode, count, this.indexBuffer.type, first * this.indexBuffer.itemSize);
