@@ -9,7 +9,7 @@ var Utils, Matrix;
     var dh = 1 / height;
     for (var i = dh * 0.5; i < 1; i += dh) {
       for (var j = dw * 0.5; j < 1; j += dw) {
-        data.push(i, j);
+        data.push(j, i);
       }
     }
     // console.log('getTextureIndecies', data);

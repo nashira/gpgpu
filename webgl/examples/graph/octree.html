@@ -41,8 +41,8 @@
 
     var vertexShader;
     var fragmentShader;
-    var size = 32;
-    var program, program2, octreeProgram;
+    var size = 64;
+    var program, program2, octreeProgram, mipmapTexture;
     var coords = Utils.getTextureIndecies(size, size);
     var octree = new Octree();
 
@@ -66,7 +66,7 @@
         depthTest: false,
         blendFunc: [gl.SRC_ALPHA, gl.ONE]
       });
-      var sizeInfo = octree.getTextureSize(32);
+      var sizeInfo = octree.getTextureSize(16);
       console.log('sizeInfo', sizeInfo)
       var octreeTarget = new RenderTarget(sizeInfo.width, sizeInfo.height, {type: gl.FLOAT});
       octreeProgram.addUniform('positionTexture', 't', positionTarget.getGlTexture());
@@ -77,13 +77,21 @@
       octreeProgram.setRenderTarget(octreeTarget, true);
 
 
-      var position = new DataBuffer(2, 4, new Float32Array([0,0, 0,1, 1,0, 1,1]));
-      program2 = new Program(shaders[2], shaders[3], {drawMode: gl.TRIANGLE_STRIP});
-      program2.addAttribute('position', 2, gl.FLOAT, position);
+      program2 = new Program(shaders[2], shaders[3], {drawMode: gl.POINTS});
+      program2.addAttribute('coords', 2, gl.FLOAT, coords);
+      program2.addUniform('lod', 'f')
+
+      mipmapTexture = new Texture(sizeInfo.width, sizeInfo.height, {
+        type: gl.FLOAT,
+        minFilter: gl.NEAREST_MIPMAP_NEAREST,
+        magFilter: gl.NEAREST
+      });
+
+      mipmapTexture.glTexture = octreeTarget.getGlTexture();
 
       program2.addUniform('tex', 't', octreeTarget.getGlTexture());
       var ww = window.innerWidth * 2, wh = window.innerHeight * 2;
-      var w = wh * 2, h = wh;
+      var w = wh * 1, h = wh;
       program2.setViewport(
         (ww - w) / 2,
         (wh - h) / 2,
@@ -97,9 +105,17 @@
       time += 0.0001;
       if (time > 1) time = -1;
       program.setUniform('time', time);
+
       program.draw(0, coords.numItems);
       octreeProgram.draw(0, coords.numItems);
-      program2.draw(0, 4);
+      var octTex = octreeProgram.renderTarget.texture;
+      mipmapTexture.generateMipmap();
+      mipmapTexture.applyParameters();
+
+      program2.setUniform('lod', ((time + 1) * 20) % 3);
+      program2.draw(0, coords.numItems);
+
+      octTex.applyParameters();
       requestAnimationFrame(animate);
     }
 

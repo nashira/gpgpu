@@ -1,11 +1,14 @@
 
 precision highp float;
 
-attribute vec2 position;
+uniform sampler2D tex;
+uniform float lod;
+attribute vec2 coords;
 
-varying vec2 vPos;
+varying vec3 vColor;
 
 void main() {
-  vPos = position;
-  gl_Position = vec4(position * 2. - 1., 0.0, 1.0);
+  vColor = texture2DLod(tex, coords, lod).xyz;
+  gl_PointSize = 15.;
+  gl_Position = vec4(coords * 2. - 1., 0.0, 1.0);
 }
