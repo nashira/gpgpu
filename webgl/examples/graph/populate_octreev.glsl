@@ -16,6 +16,7 @@ vec2 computeSliceOffset(float slice, vec2 sliceSize) {
 }
 
 vec2 getCellCoords(vec3 texCoord) {
+  texCoord = (texCoord + 1.) * .5;
   float slice   = texCoord.z * size;
   float sliceZ  = floor(slice);                         // slice we need
 
@@ -33,7 +34,7 @@ vec2 getCellCoords(vec3 texCoord) {
 
 void main() {
   vec3 position = texture2D(positionTexture, coords).xyz;
-  vec2 cellCoords = getCellCoords((position + 1.) * .5);
+  vec2 cellCoords = getCellCoords(position);
 
   vPosition = position;
 

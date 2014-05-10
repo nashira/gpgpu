@@ -41,9 +41,10 @@
 
     var vertexShader;
     var fragmentShader;
-    var size = 64;
+    var numVertices = 128 * 256;
+    var size = Utils.getPotSize(numVertices);
     var program, program2, octreeProgram, mipmapTexture;
-    var coords = Utils.getTextureIndecies(size, size);
+    var coords = Utils.getTextureIndecies(size.w, size.h, numVertices);
     var octree = new Octree();
 
     Utils.loadShaders([
@@ -57,7 +58,7 @@
       program = new Program(shaders[0], shaders[1], {drawMode: gl.POINTS});
       program.addAttribute('coords', 2, gl.FLOAT, coords);
       program.addUniform('time', 'f', 0);
-      var positionTarget = new RenderTarget(size, size, {type: gl.FLOAT});
+      var positionTarget = new RenderTarget(size.w, size.h, {type: gl.FLOAT});
       program.setRenderTarget(positionTarget, true);
 
       octreeProgram = new Program(shaders[4], shaders[5], {
@@ -66,7 +67,7 @@
         depthTest: false,
         blendFunc: [gl.SRC_ALPHA, gl.ONE]
       });
-      var sizeInfo = octree.getTextureSize(16);
+      var sizeInfo = octree.getTextureSize(32);
       console.log('sizeInfo', sizeInfo)
       var octreeTarget = new RenderTarget(sizeInfo.width, sizeInfo.height, {type: gl.FLOAT});
       octreeProgram.addUniform('positionTexture', 't', positionTarget.getGlTexture());
@@ -76,10 +77,19 @@
       octreeProgram.addAttribute('coords', 2, gl.FLOAT, coords);
       octreeProgram.setRenderTarget(octreeTarget, true);
 
+      program2 = new Program(shaders[2], shaders[3], {
+        drawMode: gl.LINE_STRIP,
+        blendEnabled: true,
+        depthTest: false
+      });
 
-      program2 = new Program(shaders[2], shaders[3], {drawMode: gl.POINTS});
       program2.addAttribute('coords', 2, gl.FLOAT, coords);
-      program2.addUniform('lod', 'f')
+      program2.addUniform('lod', 'f');
+      program2.addUniform('size', 'f', sizeInfo.size);
+      program2.addUniform('slicesPerRow', 'f', sizeInfo.slicesPerRow);
+      program2.addUniform('numRows', 'f', sizeInfo.numRows);
+      program2.addUniform('positionTexture', 't', positionTarget.getGlTexture());
+      program2.addUniform('octreeTexture', 't', octreeTarget.getGlTexture());
 
       mipmapTexture = new Texture(sizeInfo.width, sizeInfo.height, {
         type: gl.FLOAT,
@@ -88,21 +98,19 @@
       });
 
       mipmapTexture.glTexture = octreeTarget.getGlTexture();
-
-      program2.addUniform('tex', 't', octreeTarget.getGlTexture());
       var ww = window.innerWidth * 2, wh = window.innerHeight * 2;
-      var w = wh * 1, h = wh;
+      var w = wh * 2, h = wh;
       program2.setViewport(
-        (ww - w) / 2,
-        (wh - h) / 2,
-        w, h);
+        (ww - wh) / 2,
+        0,
+        wh, wh);
 
       animate();
     });
 
     var time = -1;
     function animate() {
-      time += 0.0001;
+      time += 0.001;
       if (time > 1) time = -1;
       program.setUniform('time', time);
 
@@ -112,7 +120,7 @@
       mipmapTexture.generateMipmap();
       mipmapTexture.applyParameters();
 
-      program2.setUniform('lod', ((time + 1) * 20) % 3);
+      program2.setUniform('lod', Math.floor(((time + 1) * 5) % 4));
       program2.draw(0, coords.numItems);
 
       octTex.applyParameters();

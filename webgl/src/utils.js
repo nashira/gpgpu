@@ -3,18 +3,37 @@ var Utils, Matrix;
 (function () {
   Utils = {};
 
-  Utils.getTextureIndecies = function (width, height) {
+  Utils.getTextureIndecies = function (width, height, limit) {
+    limit = limit || (width * height);
     var data = [];
     var dw = 1 / width;
     var dh = 1 / height;
     for (var i = dh * 0.5; i < 1; i += dh) {
       for (var j = dw * 0.5; j < 1; j += dw) {
         data.push(j, i);
+        if (data.length / 2 >= limit) {
+          break;
+        }
+      }
+      if (data.length / 2 >= limit) {
+        break;
       }
     }
     // console.log('getTextureIndecies', data);
-    var db = new DataBuffer(2, width * height, new Float32Array(data));
+    var db = new DataBuffer(2, limit, new Float32Array(data));
     return db;
+  }
+
+  Utils.getPotSize = function (num) {
+    var w = 1, h = 1;
+
+    while (w * h < num) {
+      w *= 2;
+      if (w * h >= num) break;
+      h *= 2;
+    }
+
+    return {w: w, h: h};
   }
 
   Utils.loadImage = function (url, onLoad) {
@@ -70,6 +89,12 @@ var Utils, Matrix;
       xhr.open('GET', url, true);
       xhr.send();
     });
+
+    // function finish() {
+    //   results.forEach(function (r) {
+    //
+    //   })
+    // }
   }
 
   Matrix = {
