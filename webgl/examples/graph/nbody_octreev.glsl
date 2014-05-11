@@ -2,17 +2,17 @@
 precision highp float;
 
 uniform sampler2D positionTexture;
+uniform sampler2D previousTexture;
 uniform sampler2D octreeTexture;
 uniform float size;
 uniform float slicesPerRow;
 uniform float numRows;
 uniform float lod;
 uniform vec2 sliceSize;
-uniform mat4 matrix;
 
 attribute vec2 coords;
 
-varying vec3 vColor;
+varying vec3 vPos;
 
 vec2 computeSliceOffset(float slice, vec2 sliceSize) {
   return sliceSize * vec2(mod(slice, slicesPerRow),
@@ -137,24 +137,41 @@ vec4 texture3DLod4(vec3 texCoord) {
   return sample;
 }
 
+vec3 getN2Force(vec3 pos) {
+  vec3 f = vec3(0.);
+  for (float y = 0.01562 * .5; y < 1.0; y += 0.015625) {
+    for (float x = 0.015625 * .5; x < 1.0; x += 0.015625) {
+      vec4 otherPosition = texture2D(positionTexture, vec2(x, y));
+      vec3 diff = otherPosition.xyz - pos.xyz;
+      float a = dot(diff, diff) + 0.01;
+      f += diff / (a * sqrt(a));
+    }
+  }
+  return f;
+}
+
 void main() {
   vec3 pos = texture2D(positionTexture, coords).xyz;
+  vec3 pre = texture2D(previousTexture, coords).xyz;
   vec4 color;
-  if (lod < 1.0) {
-    color = texture3DLod0(pos);
-  } else if (lod < 2.0) {
-    color = texture3DLod1(pos);
-  } else if (lod < 3.0) {
-    color = texture3DLod2(pos);
-  } else if (lod < 4.0) {
-    color = texture3DLod3(pos);
-  } else {
-    color = texture3DLod4(pos);
-  }
+  // if (lod < 1.0) {
+  //   color = texture3DLod0(pos);
+  // } else if (lod < 2.0) {
+  //   color = texture3DLod1(pos);
+  // } else if (lod < 3.0) {
+  //   color = texture3DLod2(pos);
+  // } else if (lod < 4.0) {
+  //   color = texture3DLod3(pos);
+  // } else {
+  //   color = texture3DLod4(pos);
+  // }
 
-  vColor = color.xyz;
-  // vColor = pos;
-  gl_PointSize = 3.;
-  // gl_Position = vec4(coords * 2. - 1., 0.0, 1.0);
-  gl_Position = vec4(pos, 1.0);
+  vec3 f = getN2Force(pos);
+  vec3 npos = 2. * pos - pre + f * 0.000000001;
+
+  vPos = clamp(npos, vec3(-1.), vec3(1.));
+
+  // vPos = pos;
+
+  gl_Position = vec4(coords * 2. - 1., 0.0, 1.0);
 }

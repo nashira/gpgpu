@@ -18,14 +18,17 @@ var Graph;
       Utils.loadShaders([
         './initial_posv.glsl',
         './initial_posf.glsl',
+        './populate_octreev.glsl',
+        './populate_octreef.glsl',
         './nbody_octreev.glsl',
         './nbody_octreef.glsl',
-        './populate_octreev.glsl',
-        './populate_octreef.glsl'], function (shaders) {
+        './visualizev.glsl',
+        './visualizef.glsl'], function (shaders) {
 
           this.initInitialPos(shaders[0], shaders[1]);
-          this.initPopulate(shaders[4], shaders[5]);
-          this.initNbody(shaders[2], shaders[3]);
+          this.initPopulate(shaders[2], shaders[3]);
+          this.initNbody(shaders[4], shaders[5]);
+          this.initVisualize(shaders[6], shaders[7]);
 
         if (onLoad) {
           onLoad();
@@ -38,9 +41,10 @@ var Graph;
       this.initialPosProg = new Program(vert, frag, {drawMode: gl.POINTS});
       this.initialPosProg.addAttribute('coords', 2, gl.FLOAT, this.vertCoords);
       this.initialPosProg.addUniform('time', 'f', 0);
+      this.initialPosProg.setViewport(0, 0, this.itemTS.w, this.itemTS.h);
       this.positionTarget = new RenderTarget(size.w, size.h, {type: gl.FLOAT});
+      this.previousTarget = new RenderTarget(size.w, size.h, {type: gl.FLOAT});
       this.tempTarget = new RenderTarget(size.w, size.h, {type: gl.FLOAT});
-      this.initialPosProg.setRenderTarget(this.positionTarget, true);
     },
 
     initPopulate: function (vert, frag) {
@@ -53,7 +57,7 @@ var Graph;
 
       var sizeInfo = this.sizeInfo;
       this.octreeTarget = new RenderTarget(sizeInfo.width, sizeInfo.height, {type: gl.FLOAT});
-      this.populateProg.addUniform('positionTexture', 't', this.positionTarget.getGlTexture());
+      this.populateProg.addUniform('positionTexture', 't');
       this.populateProg.addUniform('size', 'f', sizeInfo.size);
       this.populateProg.addUniform('slicesPerRow', 'f', sizeInfo.slicesPerRow);
       this.populateProg.addUniform('numRows', 'f', sizeInfo.numRows);
@@ -72,14 +76,15 @@ var Graph;
       var sizeInfo = this.sizeInfo;
       this.nbodyProg.addAttribute('coords', 2, gl.FLOAT, this.vertCoords);
       this.nbodyProg.addUniform('positionTexture', 't');
+      this.nbodyProg.addUniform('previousTexture', 't');
       this.nbodyProg.addUniform('octreeTexture', 't', this.octreeTarget.getGlTexture());
       this.nbodyProg.addUniform('lod', 'f');
-      // this.nbodyProg.addUniform('matrix', 'm4');
       this.nbodyProg.addUniform('size', 'f', sizeInfo.size);
       this.nbodyProg.addUniform('slicesPerRow', 'f', sizeInfo.slicesPerRow);
       this.nbodyProg.addUniform('numRows', 'f', sizeInfo.numRows);
       var sliceSize = [1 / sizeInfo.slicesPerRow, 1 / sizeInfo.numRows];
       this.nbodyProg.addUniform('sliceSize', 'v2', sliceSize);
+      this.nbodyProg.setViewport(0, 0, this.itemTS.w, this.itemTS.h);
 
       this.mipmapTexture = new Texture(sizeInfo.width, sizeInfo.height, {
         type: gl.FLOAT,
@@ -90,10 +95,28 @@ var Graph;
       this.mipmapTexture.glTexture = this.octreeTarget.getGlTexture();
     },
 
+    initVisualize: function (vert, frag) {
+      var size = this.itemTS;
+      this.visualizeProg = new Program(vert, frag, {
+          drawMode: gl.POINTS,
+          blendEnabled: true,
+          depthTest: false
+        });
+      this.visualizeProg.addUniform('positionTexture', 't');
+      this.visualizeProg.addUniform('matrix', 'm4');
+      this.visualizeProg.addAttribute('coords', 2, gl.FLOAT, this.vertCoords);
+    },
+
     runInitialPos: function (time) {
       this.initialPosProg.setUniform('time', time);
-      this.initialPosProg.setRenderTarget(this.positionTarget);
+      this.initialPosProg.setRenderTarget(this.tempTarget);
+      // this.initialPosProg.setRenderTarget(this.positionTarget);
       this.initialPosProg.draw(0, this.numItems);
+
+      var t = this.previousTarget;
+      this.previousTarget = this.positionTarget;
+      this.positionTarget = this.tempTarget;
+      this.tempTarget = t;
     },
 
     runPopulate: function () {
@@ -103,24 +126,32 @@ var Graph;
     },
 
     runNbody: function () {
-      this.nbodyProg.setUniform('positionTexture', this.positionTarget.getGlTexture());
+      this.nbodyProg.setUniform('positionTexture',
+          this.positionTarget.getGlTexture());
+      this.nbodyProg.setUniform('previousTexture',
+          this.previousTarget.getGlTexture());
       this.nbodyProg.setRenderTarget(this.tempTarget);
       this.mipmapTexture.generateMipmap();
       this.mipmapTexture.applyParameters();
 
       this.nbodyProg.draw(0, this.numItems);
-      this.swapTargets('tempTarget', 'positionTarget');
+
+      var t = this.previousTarget;
+      this.previousTarget = this.positionTarget;
+      this.positionTarget = this.tempTarget;
+      this.tempTarget = t;
+
+      // var t = this.positionTarget;
+      // this.positionTarget = this.tempTarget;
+      // this.tempTarget = t;
       // this.octreeTarget.texture.applyParameters();
     },
 
-    runVisualization: function () {
-
-    },
-
-    swapTargets: function (a, b) {
-      var t = this[a];
-      this[a] = this[b];
-      this[b] = t;
+    runVisualize: function (matrix) {
+      this.visualizeProg.setUniform('positionTexture',
+          this.positionTarget.getGlTexture());
+      this.visualizeProg.setUniform('matrix', matrix);
+      this.visualizeProg.draw(0, this.numItems);
     },
 
     setDepth: function (depth) {

@@ -39,37 +39,34 @@
     var gl = canvas.getContext('webgl');
     Program.init(gl);
 
-    var numVertices = 128 * 128;
+
+    var ww = window.innerWidth * 2, wh = window.innerHeight * 2;
+    var w = wh * 2, h = wh;
+    var numVertices = 64 * 64;
+    // var numVertices = 128 * 128;
 
     var graph = new Graph(numVertices, 5, function () {
-
+      graph.visualizeProg.setViewport(0, 0, ww, wh);
+      graph.runInitialPos(0.3);
+      graph.runInitialPos(0.3003);
       animate();
     });
-
-// var ww = window.innerWidth * 2, wh = window.innerHeight * 2;
-// var w = wh * 2, h = wh;
-// initialPosProg2.setViewport(
-//   0,
-//   0,
-//   ww, wh);
 
     var angle = 0, m = [];
     var rm = Matrix.makeYRotation(angle);
     var tm = Matrix.makeTranslation(0, 0, -5);
-    var pm = Matrix.makePerspective(0.6, window.innerWidth / window.innerHeight, 0, 100);
+    var pm = Matrix.makePerspective(0.6, window.innerWidth / window.innerHeight, 0.1, 100);
 
     var time = -1;
     function animate() {
       time += 0.001;
       // if (time > 1) time = -1;
+      Matrix.setYRotation(rm, angle += 0.001);
+      Matrix.multiply(m, rm, tm, pm);
 
-      graph.runInitialPos(time);
-      graph.runPopulate();
+      // graph.runPopulate();
       graph.runNbody();
-      // Matrix.setYRotation(rm, angle += 0.005);
-      // Matrix.multiply(m, rm, tm, pm);
-      //
-      // program2.setUniform('matrix', m);
+      graph.runVisualize(m);
 
       requestAnimationFrame(animate);
     }

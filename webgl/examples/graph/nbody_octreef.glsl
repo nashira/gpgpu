@@ -2,8 +2,8 @@
 precision highp float;
 
 uniform float lod;
-varying vec3 vColor;
+varying vec3 vPos;
 
 void main() {
-  gl_FragColor = vec4(abs(vColor * .1 * (lod + 1.)), 1.);
+  gl_FragColor = vec4(vPos, 1.);
 }
