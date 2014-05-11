@@ -26,7 +26,7 @@ vec4 texture3DLod0(vec3 texCoord) {
 
   float start = floor(texCoord.z * size);
 
-  vec2 uv = slicePixelSize * 0.5 + texCoord.xy * sliceInnerSize;
+  vec2 uv = texCoord.xy * sliceSize;
 
   vec2 slice0 = computeSliceOffset(start, sliceSize);
 
@@ -39,7 +39,7 @@ vec4 texture3DLod1(vec3 texCoord) {
   float lsize = size / 2.;
   float start = floor(texCoord.z * lsize) * 2.;
 
-  vec2 uv = slicePixelSize * 0.5 + texCoord.xy * sliceInnerSize;
+  vec2 uv = texCoord.xy * sliceSize;
 
   vec2 slice0 = computeSliceOffset(start, sliceSize);
   vec2 slice1 = computeSliceOffset(start + 1.0, sliceSize);
@@ -53,7 +53,7 @@ vec4 texture3DLod2(vec3 texCoord) {
   float lsize = size / 4.;
   float start = floor(texCoord.z * lsize) * 4.;
 
-  vec2 uv = slicePixelSize * .5 + texCoord.xy * sliceInnerSize;
+  vec2 uv = texCoord.xy * sliceSize;
 
   vec2 slice0 = computeSliceOffset(start, sliceSize);
   vec2 slice1 = computeSliceOffset(start + 1., sliceSize);
@@ -72,7 +72,7 @@ vec4 texture3DLod3(vec3 texCoord) {
   float lsize = size / 8.;
   float start = floor(texCoord.z * lsize) * 8.;
 
-  vec2 uv = slicePixelSize * .5 + texCoord.xy * sliceInnerSize;
+  vec2 uv = texCoord.xy * sliceSize;
 
   vec2 slice0 = computeSliceOffset(start, sliceSize);
   vec2 slice1 = computeSliceOffset(start + 1., sliceSize);
@@ -99,7 +99,7 @@ vec4 texture3DLod4(vec3 texCoord) {
   float lsize = size / 8.;
   float start = floor(texCoord.z * lsize) * 8.;
 
-  vec2 uv = slicePixelSize * .5 + texCoord.xy * sliceInnerSize;
+  vec2 uv = texCoord.xy * sliceSize;
 
   vec2 slice0 = computeSliceOffset(start, sliceSize);
   vec2 slice1 = computeSliceOffset(start + 1., sliceSize);
@@ -152,6 +152,7 @@ void main() {
   }
 
   vColor = color.xyz;
+  // vColor = pos;
   gl_PointSize = 3.;
   // gl_Position = vec4(coords * 2. - 1., 0.0, 1.0);
   gl_Position = matrix * vec4(pos, 1.0);

@@ -18,13 +18,13 @@ var TerrainVisualizer;
     '  float h2 = texture2D(erosion, coord + vec2(cDelta, 0)).x;',
     '  float h3 = texture2D(erosion, coord + vec2(0., cDelta)).x;',
     '  float h4 = texture2D(erosion, coord + vec2(0., -cDelta)).x;',
-  
+
     '  vec3 c1 = vec3(coord.x - cDelta, h1, coord.y) - vec3(coord.x + cDelta, h2, coord.y);',
     '  vec3 c2 = vec3(coord.x, h3, coord.y + cDelta) - vec3(coord.x, h4, coord.y - cDelta);',
-  
+
     '  return normalize(cross(c1, c2));',
     '}',
-    
+
     'void main() {',
     '  vec4 vertex = texture2D(erosion, coords);',
     '  vNormal = getNormal(coords);',
@@ -35,15 +35,15 @@ var TerrainVisualizer;
     '  gl_Position = pMatrix * wPos;',
     '}'
     ].join('\n');
-  
-  
+
+
   var fragmentShader = [
     'precision highp float;',
     'uniform float lightness;',
     'uniform float colorScale;',
-    
+
     'uniform mat4 mvMatrix;',
-    
+
     'varying vec3 vWorldPos;',
     'varying vec3 vNormal;',
     'varying vec4 vData;',
@@ -55,13 +55,13 @@ var TerrainVisualizer;
     'const vec4 light_diffuse = vec4(1., 1., 1., 1.0);',
     'const vec4 light_ambient = vec4(0.2, 0.2, 0.3, 1.0);',
     'const vec4 light_specular = vec4(1.0, 1.0, 1.0, 1.0);',
-    
+
     'const vec3 sand = vec3(.75, .66, .47);',
     // 'const vec3 grass = vec3(.34, .37, .15);',
     'const vec3 grass = vec3(.22, .32, .05);',
     'const vec3 rock = vec3(.37, .30, .25);',
     'const vec3 snow = vec3(.95, .95, .99);',
-    
+
     'void main() {',
     '  float height = max(0., vData.x) * colorScale;',
     '  vec4 weights;',
@@ -71,12 +71,12 @@ var TerrainVisualizer;
     '  weights.w = clamp(1. - abs(height - 0.9) * 4., 0., 1.);',
     '  weights /= (weights.x + weights.y + weights.z + weights.w - lightness);',
     '  vec3 color = sand * weights.x + grass * weights.y + rock * weights.z + snow * weights.w;',
-    
+
     'vec3 mv_light_direction = normalize((mvMatrix * vec4(light_direction, 0.0)).xyz);',
     'vec3 eye = normalize(vWorldPos);',
     'vec3 reflection = reflect(mv_light_direction, vNormal);',
     // // 'vec4 frag_diffuse = vec4(.1);',
-    // 
+    //
     // '  vec3 color = mix(vec3(.86,.57,.34), vec3(1.), vData.x * 10. + .2);',
 
     // '  if (vData.y > .001) {',
@@ -88,10 +88,10 @@ var TerrainVisualizer;
     'vec4 ambient_diffuse_factor = diffuse_factor + light_ambient;',
     // 'vec4 specular_factor = max(pow(-dot(reflection, eye), vNormal.y * vNormal.y), 0.0) * light_specular;',
     // 'gl_FragColor = specular_factor * vec4(.1) + ambient_diffuse_factor * frag_diffuse;',
-    
+
     'gl_FragColor = ambient_diffuse_factor * frag_diffuse;',
     // 'gl_FragColor = frag_diffuse;',
-    
+
     '}'
     ].join('\n');
 
@@ -103,9 +103,9 @@ var TerrainVisualizer;
     'uniform float waterVisDepth;',
     'attribute vec2 coords;',
     'const float cDelta = 1. / #{size}.;',
-    
+
     'varying vec4 vData;',
-  
+
     'void main() {',
     '  vec4 vertex = texture2D(erosion, coords);',
     // '  vNormal = getNormal(coords);',
@@ -129,7 +129,7 @@ var TerrainVisualizer;
     '  gl_FragColor = waterColor;',
     '}'
     ].join('\n');
-    
+
   TerrainVisualizer = function (width, height, viewWidth, viewHeight) {
 
     vertexShader = vertexShader.replace(/#\{size\}/g, width);
@@ -142,37 +142,38 @@ var TerrainVisualizer;
       // blendEquation: gl.MAX,
       blendFunc: [gl.SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA]
     });
-    
+
     this.waterProgram = new Program(waterVertexShader, waterFragmentShader, {
       drawMode: gl.TRIANGLE_STRIP,
       // drawMode: gl.LINE_STRIP,
       cullFace: gl.BACK,
       blendEnabled: true,
+      clear: false,
       // depthTest: true,
       // blendEquation: gl.MAX,
       blendFunc: [gl.ONE_MINUS_SRC_ALPHA, gl.ONE]
     });
-    
+
     var pm = Matrix.makePerspective(.8, viewWidth / viewHeight, .1, 1000);
-  
+
     this.program.addUniform('erosion', 't');
     this.program.addUniform('lightness', 'f');
     this.program.addUniform('colorScale', 'f');
     this.program.addUniform('pMatrix', 'm4', pm);
     this.program.addUniform('mvMatrix', 'm4');
-  
+
     this.waterProgram.addUniform('erosion', 't');
     this.waterProgram.addUniform('waterVisDepth', 'f');
     this.waterProgram.addUniform('waterColor', 'v4');
     this.waterProgram.addUniform('pMatrix', 'm4', pm);
     this.waterProgram.addUniform('mvMatrix', 'm4');
-    
+
     this.program.setViewport(0, 0, viewWidth, viewHeight);
     this.waterProgram.setViewport(0, 0, viewWidth, viewHeight);
 
     this.numIndecies = (2 * width) * (height - 1) + 3 * (height - 1);
     this.buildGeometry(width, height);
-  
+
     this.params = {
       lightness: 0.2,
       colorScale: 5,
@@ -184,7 +185,7 @@ var TerrainVisualizer;
       renderTerrain: true
     };
   }
-  
+
   TerrainVisualizer.prototype = {
     renderTerrain: function (matrix, erosion) {
       this.program.setUniform('mvMatrix', matrix);
@@ -193,7 +194,7 @@ var TerrainVisualizer;
       this.program.setUniform('colorScale', this.params.colorScale);
       this.program.draw(0, this.numIndecies);
     },
-    
+
     renderWater: function (matrix, erosion) {
       this.waterProgram.setUniform('mvMatrix', matrix);
       this.waterProgram.setUniform('erosion', erosion);
@@ -201,7 +202,7 @@ var TerrainVisualizer;
       this.waterProgram.setUniform('waterVisDepth', this.params.waterVisDepth);
       this.waterProgram.draw(0, this.numIndecies);
     },
-    
+
     buildGeometry: function (w, h) {
       var w1 = w - 1;
       var h1 = h - 1;
@@ -212,7 +213,7 @@ var TerrainVisualizer;
       var indecies = [];
       var sx = 1 / w ;
       var sy = 1 / h;
-    
+
       for (i = 0; i < h; i++) {
         for (j = 0; j < w; j++) {
           var x = sx * j + sx * 0.5;
@@ -237,7 +238,7 @@ var TerrainVisualizer;
         }
         d = !d;
       }
-    
+
       var position = new DataBuffer(2, numVerts, new Float32Array(vertecies));
       this.program.addAttribute('coords', 2, gl.FLOAT, position);
       this.waterProgram.addAttribute('coords', 2, gl.FLOAT, position);
@@ -246,6 +247,6 @@ var TerrainVisualizer;
       this.waterProgram.setIndexBuffer(indecies);
     }
   };
-  
-  
+
+
 }());

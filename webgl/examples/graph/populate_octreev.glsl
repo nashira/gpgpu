@@ -25,10 +25,7 @@ vec2 getCellCoords(vec3 texCoord) {
 
   vec2 slice0Offset = computeSliceOffset(sliceZ, sliceSize);
 
-  vec2 slicePixelSize = sliceSize / size;               // space of 1 pixel
-  vec2 sliceInnerSize = slicePixelSize * (size - 1.0);  // space of size pixels
-
-  vec2 uv = slicePixelSize * 0.5 + texCoord.xy * sliceInnerSize;
+  vec2 uv = texCoord.xy * sliceSize;
   return slice0Offset + uv;
 }
 

@@ -20,6 +20,24 @@ var Octree;
   Octree.prototype.slice = function (size, lod) {
     var m = Math.pow(2, lod);
     var lsize = size / m;
+    for (var i = 0; i < 1; i += 1 / 32) {
+      var s = Math.floor(i * lsize);
+      var s1 = s + 1;
+      console.log(i, s * m, s1 * m - 1)
+    }
+  }
+
+  Octree.prototype.partition = function (size, lod) {
+    // current {x:, y:, z}
+    // {
+    //   0: []
+    //   1:
+    //   2:
+    //   3:
+    //   4:
+    // }
+    var m = Math.pow(2, lod);
+    var lsize = size / m;
     for (var i = 0; i < 1; i+=1/32) {
       var s = Math.floor(i * lsize);
       var s1 = s + 1;

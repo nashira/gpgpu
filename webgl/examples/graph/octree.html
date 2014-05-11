@@ -79,8 +79,8 @@
       octreeProgram.setRenderTarget(octreeTarget, true);
 
       program2 = new Program(shaders[2], shaders[3], {
-        // drawMode: gl.POINTS,
-        drawMode: gl.LINE_STRIP,
+        drawMode: gl.POINTS,
+        // drawMode: gl.LINE_STRIP,
         blendEnabled: true,
         depthTest: false
       });
@@ -95,7 +95,7 @@
       program2.addUniform('numRows', 'f', sizeInfo.numRows);
       var sliceSize = [1 / sizeInfo.slicesPerRow, 1 / sizeInfo.numRows];
       program2.addUniform('sliceSize', 'v2', sliceSize);
-      var slicePixelSize = [(sliceSize[0] / sizeInfo.size), (sliceSize[1] / sizeInfo.size)];
+      var slicePixelSize = [sliceSize[0] / sizeInfo.size, sliceSize[1] / sizeInfo.size];
       program2.addUniform('slicePixelSize', 'v2', slicePixelSize);
       var sliceInnerSize = [slicePixelSize[0] * (sizeInfo.size - 1), slicePixelSize[1] * (sizeInfo.size - 1)];
       program2.addUniform('sliceInnerSize', 'v2', sliceInnerSize);
@@ -126,8 +126,8 @@
     var time = -1;
     function animate() {
       time += 0.001;
-      if (time > 1) time = -1;
-      program.setUniform('time', angle);
+      // if (time > 1) time = -1;
+      program.setUniform('time', time);
 
       program.draw(0, coords.numItems);
       octreeProgram.draw(0, coords.numItems);
@@ -140,7 +140,7 @@
 
       program2.setUniform('matrix', m);
 
-      program2.setUniform('lod', Math.floor(((time + 1) * 5) % 5));
+      // program2.setUniform('lod', Math.floor(((time + 1) * 5) % 5));
       program2.draw(0, coords.numItems);
 
       octTex.applyParameters();
