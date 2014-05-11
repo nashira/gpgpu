@@ -41,7 +41,7 @@
 
     var vertexShader;
     var fragmentShader;
-    var numVertices = 128 * 256;
+    var numVertices = 128 * 128;
     var size = Utils.getPotSize(numVertices);
     var program, program2, octreeProgram, mipmapTexture;
     var coords = Utils.getTextureIndecies(size.w, size.h, numVertices);
@@ -67,6 +67,7 @@
         depthTest: false,
         blendFunc: [gl.SRC_ALPHA, gl.ONE]
       });
+
       var sizeInfo = octree.getTextureSize(32);
       console.log('sizeInfo', sizeInfo)
       var octreeTarget = new RenderTarget(sizeInfo.width, sizeInfo.height, {type: gl.FLOAT});
@@ -78,18 +79,26 @@
       octreeProgram.setRenderTarget(octreeTarget, true);
 
       program2 = new Program(shaders[2], shaders[3], {
+        // drawMode: gl.POINTS,
         drawMode: gl.LINE_STRIP,
         blendEnabled: true,
         depthTest: false
       });
 
       program2.addAttribute('coords', 2, gl.FLOAT, coords);
+      program2.addUniform('positionTexture', 't', positionTarget.getGlTexture());
+      program2.addUniform('octreeTexture', 't', octreeTarget.getGlTexture());
       program2.addUniform('lod', 'f');
+      program2.addUniform('matrix', 'm4');
       program2.addUniform('size', 'f', sizeInfo.size);
       program2.addUniform('slicesPerRow', 'f', sizeInfo.slicesPerRow);
       program2.addUniform('numRows', 'f', sizeInfo.numRows);
-      program2.addUniform('positionTexture', 't', positionTarget.getGlTexture());
-      program2.addUniform('octreeTexture', 't', octreeTarget.getGlTexture());
+      var sliceSize = [1 / sizeInfo.slicesPerRow, 1 / sizeInfo.numRows];
+      program2.addUniform('sliceSize', 'v2', sliceSize);
+      var slicePixelSize = [(sliceSize[0] / sizeInfo.size), (sliceSize[1] / sizeInfo.size)];
+      program2.addUniform('slicePixelSize', 'v2', slicePixelSize);
+      var sliceInnerSize = [slicePixelSize[0] * (sizeInfo.size - 1), slicePixelSize[1] * (sizeInfo.size - 1)];
+      program2.addUniform('sliceInnerSize', 'v2', sliceInnerSize);
 
       mipmapTexture = new Texture(sizeInfo.width, sizeInfo.height, {
         type: gl.FLOAT,
@@ -101,18 +110,24 @@
       var ww = window.innerWidth * 2, wh = window.innerHeight * 2;
       var w = wh * 2, h = wh;
       program2.setViewport(
-        (ww - wh) / 2,
         0,
-        wh, wh);
+        0,
+        ww, wh);
 
       animate();
     });
+
+
+    var angle = 0, m = [];
+    var rm = Matrix.makeYRotation(angle);
+    var tm = Matrix.makeTranslation(0, 0, -5);
+    var pm = Matrix.makePerspective(0.6, window.innerWidth / window.innerHeight, 0, 100);
 
     var time = -1;
     function animate() {
       time += 0.001;
       if (time > 1) time = -1;
-      program.setUniform('time', time);
+      program.setUniform('time', angle);
 
       program.draw(0, coords.numItems);
       octreeProgram.draw(0, coords.numItems);
@@ -120,7 +135,12 @@
       mipmapTexture.generateMipmap();
       mipmapTexture.applyParameters();
 
-      program2.setUniform('lod', Math.floor(((time + 1) * 5) % 4));
+      Matrix.setYRotation(rm, angle += 0.005);
+      Matrix.multiply(m, rm, tm, pm);
+
+      program2.setUniform('matrix', m);
+
+      program2.setUniform('lod', Math.floor(((time + 1) * 5) % 5));
       program2.draw(0, coords.numItems);
 
       octTex.applyParameters();
