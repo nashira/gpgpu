@@ -28,7 +28,8 @@ var Octree;
   }
 
   Octree.prototype.partition = function (size, lod) {
-    // current {x:, y:, z}
+    // var
+    var current = {x: 0.14, y: 0.23, z: 0.87};
     // {
     //   0: []
     //   1:

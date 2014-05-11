@@ -8,8 +8,6 @@ uniform float slicesPerRow;
 uniform float numRows;
 uniform float lod;
 uniform vec2 sliceSize;
-uniform vec2 slicePixelSize;
-uniform vec2 sliceInnerSize;
 uniform mat4 matrix;
 
 attribute vec2 coords;
@@ -36,7 +34,7 @@ vec4 texture3DLod0(vec3 texCoord) {
 vec4 texture3DLod1(vec3 texCoord) {
   texCoord = (texCoord + 1.) * .5;
 
-  float lsize = size / 2.;
+  float lsize = size * .5;
   float start = floor(texCoord.z * lsize) * 2.;
 
   vec2 uv = texCoord.xy * sliceSize;
@@ -50,7 +48,7 @@ vec4 texture3DLod1(vec3 texCoord) {
 vec4 texture3DLod2(vec3 texCoord) {
   texCoord = (texCoord + 1.) * .5;
 
-  float lsize = size / 4.;
+  float lsize = size * .25;
   float start = floor(texCoord.z * lsize) * 4.;
 
   vec2 uv = texCoord.xy * sliceSize;
@@ -59,17 +57,18 @@ vec4 texture3DLod2(vec3 texCoord) {
   vec2 slice1 = computeSliceOffset(start + 1., sliceSize);
   vec2 slice2 = computeSliceOffset(start + 2., sliceSize);
   vec2 slice3 = computeSliceOffset(start + 3., sliceSize);
-  vec4 c1 = mix(texture2DLod(octreeTexture, slice0 + uv, lod),
-          texture2DLod(octreeTexture, slice1 + uv, lod), .5);
-  vec4 c2 = mix(texture2DLod(octreeTexture, slice2 + uv, lod),
-          texture2DLod(octreeTexture, slice3 + uv, lod), .5);
-  return mix(c1, c2, .5);
+  vec4 sample = texture2DLod(octreeTexture, slice0 + uv, lod);
+  sample += texture2DLod(octreeTexture, slice1 + uv, lod);
+  sample += texture2DLod(octreeTexture, slice2 + uv, lod);
+  sample += texture2DLod(octreeTexture, slice3 + uv, lod);
+  sample *= .25;
+  return sample;
 }
 
 vec4 texture3DLod3(vec3 texCoord) {
   texCoord = (texCoord + 1.) * .5;
 
-  float lsize = size / 8.;
+  float lsize = size * .125;
   float start = floor(texCoord.z * lsize) * 8.;
 
   vec2 uv = texCoord.xy * sliceSize;
@@ -82,22 +81,23 @@ vec4 texture3DLod3(vec3 texCoord) {
   vec2 slice5 = computeSliceOffset(start + 5., sliceSize);
   vec2 slice6 = computeSliceOffset(start + 6., sliceSize);
   vec2 slice7 = computeSliceOffset(start + 7., sliceSize);
-  vec4 c1 = mix(texture2DLod(octreeTexture, slice0 + uv, lod),
-          texture2DLod(octreeTexture, slice1 + uv, lod), .5);
-  vec4 c2 = mix(texture2DLod(octreeTexture, slice2 + uv, lod),
-          texture2DLod(octreeTexture, slice3 + uv, lod), .5);
-  vec4 c3 = mix(texture2DLod(octreeTexture, slice4 + uv, lod),
-          texture2DLod(octreeTexture, slice5 + uv, lod), .5);
-  vec4 c4 = mix(texture2DLod(octreeTexture, slice6 + uv, lod),
-          texture2DLod(octreeTexture, slice7 + uv, lod), .5);
-  return mix(mix(c1, c2, .5), mix(c3, c4, .5), .5);
+  vec4 sample = texture2DLod(octreeTexture, slice0 + uv, lod);
+  sample += texture2DLod(octreeTexture, slice1 + uv, lod);
+  sample += texture2DLod(octreeTexture, slice2 + uv, lod);
+  sample += texture2DLod(octreeTexture, slice3 + uv, lod);
+  sample += texture2DLod(octreeTexture, slice4 + uv, lod);
+  sample += texture2DLod(octreeTexture, slice5 + uv, lod);
+  sample += texture2DLod(octreeTexture, slice6 + uv, lod);
+  sample += texture2DLod(octreeTexture, slice7 + uv, lod);
+  sample *= .125;
+  return sample;
 }
 
 vec4 texture3DLod4(vec3 texCoord) {
   texCoord = (texCoord + 1.) * .5;
 
-  float lsize = size / 8.;
-  float start = floor(texCoord.z * lsize) * 8.;
+  float lsize = size * .0625;
+  float start = floor(texCoord.z * lsize) * 16.;
 
   vec2 uv = texCoord.xy * sliceSize;
 
@@ -117,23 +117,24 @@ vec4 texture3DLod4(vec3 texCoord) {
   vec2 slice13 = computeSliceOffset(start + 13., sliceSize);
   vec2 slice14 = computeSliceOffset(start + 14., sliceSize);
   vec2 slice15 = computeSliceOffset(start + 15., sliceSize);
-  vec4 c1 = mix(texture2DLod(octreeTexture, slice0 + uv, lod),
-          texture2DLod(octreeTexture, slice1 + uv, lod), .5);
-  vec4 c2 = mix(texture2DLod(octreeTexture, slice2 + uv, lod),
-          texture2DLod(octreeTexture, slice3 + uv, lod), .5);
-  vec4 c3 = mix(texture2DLod(octreeTexture, slice4 + uv, lod),
-          texture2DLod(octreeTexture, slice5 + uv, lod), .5);
-  vec4 c4 = mix(texture2DLod(octreeTexture, slice6 + uv, lod),
-          texture2DLod(octreeTexture, slice7 + uv, lod), .5);
-  vec4 c5 = mix(texture2DLod(octreeTexture, slice8 + uv, lod),
-          texture2DLod(octreeTexture, slice9 + uv, lod), .5);
-  vec4 c6 = mix(texture2DLod(octreeTexture, slice10 + uv, lod),
-          texture2DLod(octreeTexture, slice11 + uv, lod), .5);
-  vec4 c7 = mix(texture2DLod(octreeTexture, slice12 + uv, lod),
-          texture2DLod(octreeTexture, slice13 + uv, lod), .5);
-  vec4 c8 = mix(texture2DLod(octreeTexture, slice14 + uv, lod),
-          texture2DLod(octreeTexture, slice15 + uv, lod), .5);
-  return mix(mix(mix(c1, c2, .5), mix(c3, c4, .5), .5), mix(mix(c5, c6, .5), mix(c7, c8, .5), .5), .5);
+  vec4 sample = texture2DLod(octreeTexture, slice0 + uv, lod);
+  sample += texture2DLod(octreeTexture, slice1 + uv, lod);
+  sample += texture2DLod(octreeTexture, slice2 + uv, lod);
+  sample += texture2DLod(octreeTexture, slice3 + uv, lod);
+  sample += texture2DLod(octreeTexture, slice4 + uv, lod);
+  sample += texture2DLod(octreeTexture, slice5 + uv, lod);
+  sample += texture2DLod(octreeTexture, slice6 + uv, lod);
+  sample += texture2DLod(octreeTexture, slice7 + uv, lod);
+  sample += texture2DLod(octreeTexture, slice8 + uv, lod);
+  sample += texture2DLod(octreeTexture, slice9 + uv, lod);
+  sample += texture2DLod(octreeTexture, slice10 + uv, lod);
+  sample += texture2DLod(octreeTexture, slice11 + uv, lod);
+  sample += texture2DLod(octreeTexture, slice12 + uv, lod);
+  sample += texture2DLod(octreeTexture, slice13 + uv, lod);
+  sample += texture2DLod(octreeTexture, slice14 + uv, lod);
+  sample += texture2DLod(octreeTexture, slice15 + uv, lod);
+  sample *= .0625;
+  return sample;
 }
 
 void main() {
