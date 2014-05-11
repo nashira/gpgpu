@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+  <title>webgl</title>
+  <meta charset='utf-8'>
+  <meta name='viewport' content='width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0'>
+  <style>
+  body {
+    background-color: #000000;
+    margin: 0px;
+    overflow: hidden;
+    font-family:Monospace;
+    font-size:13px;
+    text-align:center;
+    font-weight: bold;
+    text-align:center;
+  }
+
+  </style>
+</head>
+<body>
+  <canvas id="canvas"></canvas>
+
+  <script src='../../src/program.js'></script>
+  <script src='../../src/databuffer.js'></script>
+  <script src='../../src/indexbuffer.js'></script>
+  <script src='../../src/rendertarget.js'></script>
+  <script src='../../src/texture.js'></script>
+  <script src='../../src/shaderlib.js'></script>
+  <script src='../../src/utils.js'></script>
+  <script src='./graph.js'></script>
+
+  <script>
+    var canvas = document.getElementById('canvas');
+    var devicePixelRatio = window.devicePixelRatio || 1;
+    canvas.width = window.innerWidth * devicePixelRatio;
+    canvas.height = window.innerHeight * devicePixelRatio;
+    canvas.style.width = canvas.style.height = '100%';
+    var gl = canvas.getContext('webgl');
+    Program.init(gl);
+
+    var numVertices = 128 * 128;
+
+    var graph = new Graph(numVertices, 5, function () {
+
+      animate();
+    });
+
+// var ww = window.innerWidth * 2, wh = window.innerHeight * 2;
+// var w = wh * 2, h = wh;
+// initialPosProg2.setViewport(
+//   0,
+//   0,
+//   ww, wh);
+
+    var angle = 0, m = [];
+    var rm = Matrix.makeYRotation(angle);
+    var tm = Matrix.makeTranslation(0, 0, -5);
+    var pm = Matrix.makePerspective(0.6, window.innerWidth / window.innerHeight, 0, 100);
+
+    var time = -1;
+    function animate() {
+      time += 0.001;
+      // if (time > 1) time = -1;
+
+      graph.runInitialPos(time);
+      graph.runPopulate();
+      graph.runNbody();
+      // Matrix.setYRotation(rm, angle += 0.005);
+      // Matrix.multiply(m, rm, tm, pm);
+      //
+      // program2.setUniform('matrix', m);
+
+      requestAnimationFrame(animate);
+    }
+
+  </script>
+
+</body>
+</html>

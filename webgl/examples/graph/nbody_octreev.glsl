@@ -156,5 +156,5 @@ void main() {
   // vColor = pos;
   gl_PointSize = 3.;
   // gl_Position = vec4(coords * 2. - 1., 0.0, 1.0);
-  gl_Position = matrix * vec4(pos, 1.0);
+  gl_Position = vec4(pos, 1.0);
 }

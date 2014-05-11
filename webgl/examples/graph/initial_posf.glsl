@@ -5,7 +5,7 @@ varying vec2 vCoords;
 ${noise3d}
 
 float fn(vec3 coords) {
-  return snoise(coords * 1.);
+  return snoise(coords * 100.);
 }
 
 void main() {
