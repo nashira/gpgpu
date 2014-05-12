@@ -110,17 +110,13 @@ var Graph;
     runInitialPos: function (time) {
       this.initialPosProg.setUniform('time', time);
       this.initialPosProg.setRenderTarget(this.tempTarget);
-      // this.initialPosProg.setRenderTarget(this.positionTarget);
       this.initialPosProg.draw(0, this.numItems);
-
-      var t = this.previousTarget;
-      this.previousTarget = this.positionTarget;
-      this.positionTarget = this.tempTarget;
-      this.tempTarget = t;
+      this.swapTargets();
     },
 
     runPopulate: function () {
-      this.populateProg.setUniform('positionTexture', this.positionTarget.getGlTexture());
+      this.populateProg.setUniform('positionTexture',
+          this.positionTarget.getGlTexture());
       // this.octreeTarget.texture.applyParameters();
       this.populateProg.draw(0, this.numItems);
     },
@@ -135,16 +131,7 @@ var Graph;
       this.mipmapTexture.applyParameters();
 
       this.nbodyProg.draw(0, this.numItems);
-
-      var t = this.previousTarget;
-      this.previousTarget = this.positionTarget;
-      this.positionTarget = this.tempTarget;
-      this.tempTarget = t;
-
-      // var t = this.positionTarget;
-      // this.positionTarget = this.tempTarget;
-      // this.tempTarget = t;
-      // this.octreeTarget.texture.applyParameters();
+      this.swapTargets();
     },
 
     runVisualize: function (matrix) {
@@ -165,32 +152,13 @@ var Graph;
         width: d.w * size,
         height: d.h * size
       }
+    },
+
+    swapTargets: function () {
+      var t = this.previousTarget;
+      this.previousTarget = this.positionTarget;
+      this.positionTarget = this.tempTarget;
+      this.tempTarget = t;
     }
   };
-
-  Graph.prototype.snapTo = function (x, y, size, lod) {
-    var m = Math.pow(2, lod);
-    var lsize = size / m;
-  }
-
-  Graph.prototype.partition = function (size, lod) {
-    // var
-    var current = {x: 0.14, y: 0.23, z: 0.87};
-    // {
-    //   0: []
-    //   1:
-    //   2:
-    //   3:
-    //   4:
-    // }
-    var m = Math.pow(2, lod);
-    var lsize = size / m;
-    for (var i = 0; i < 1; i+=1/32) {
-      var s = Math.floor(i * lsize);
-      var s1 = s + 1;
-      console.log(i, s * m, s1 * m - 1)
-    }
-  }
-
-
 }());
