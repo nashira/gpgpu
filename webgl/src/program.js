@@ -26,22 +26,6 @@ var Program;
     if (vertexShader && fragmentShader) {
       this.buildProgram(vertexShader, fragmentShader);
     }
-    if (params.shaderUrls) {
-      Utils.loadFile(params.shaderUrls[0], function (vertext) {
-        vertexShader = vertext;
-        if (fragmentShader) {
-          this.buildProgram(vertexShader, fragmentShader);
-          if (params.onLoad) params.onLoad();
-        }
-      });
-      Utils.loadFile(params.shaderUrls[1], function (fragment) {
-        fragmentShader = fragment;
-        if (vertexShader) {
-          this.buildProgram(vertexShader, fragmentShader);
-          if (params.onLoad) params.onLoad();
-        }
-      });
-    }
   }
 
   Program.init = function (_gl) {

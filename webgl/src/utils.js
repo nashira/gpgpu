@@ -37,20 +37,20 @@ var Utils, Matrix;
   }
 
   Utils.loadImage = function (url, onLoad) {
-    var cubeImage = new Image();
-    cubeImage.onload = function () {
+    var image = new Image();
+    image.onload = function () {
       onLoad(cubeImage);
     };
-    cubeImage.src = url;
+    image.src = url;
   }
 
   Utils.loadFile = function (url, onLoad) {
     var xhr = new XMLHttpRequest();
+    xhr.responseType = "arraybuffer";
     xhr.onreadystatechange = function () {
       if (xhr.readyState == 4) {
-        // console.log(xhr.responseText);
         if (onLoad) {
-          onLoad(xhr.responseText);
+          onLoad(xhr);
         }
       }
     }

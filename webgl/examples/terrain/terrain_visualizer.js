@@ -48,12 +48,12 @@ var TerrainVisualizer;
     'varying vec3 vNormal;',
     'varying vec4 vData;',
 
-    // 'const vec3 light_direction = vec3(0.24, -0.97, 0.);',
-    'const vec3 light_direction = vec3(0.0, -1., 0.);',
+    'const vec3 light_direction = vec3(0.24, -0.97, 0.);',
+    // 'const vec3 light_direction = vec3(0.0, -1., 0.);',
     // 'const vec3 light_direction = vec3(0., -0.894427, 0.447214);',
     // 'const vec4 light_diffuse = vec4(0.8, 0.8, 0.8, 0.0);',
-    'const vec4 light_diffuse = vec4(1., 1., 1., 1.0);',
-    'const vec4 light_ambient = vec4(0.2, 0.2, 0.3, 1.0);',
+    'const vec4 light_diffuse = vec4(.9, .9, .9, 1.0);',
+    'const vec4 light_ambient = vec4(0.3, 0.3, 0.3, 1.0);',
     'const vec4 light_specular = vec4(1.0, 1.0, 1.0, 1.0);',
 
     'const vec3 sand = vec3(.75, .66, .47);',
@@ -72,7 +72,7 @@ var TerrainVisualizer;
     '  weights /= (weights.x + weights.y + weights.z + weights.w - lightness);',
     '  vec3 color = sand * weights.x + grass * weights.y + rock * weights.z + snow * weights.w;',
 
-    'vec3 mv_light_direction = normalize((mvMatrix * vec4(light_direction, 0.0)).xyz);',
+    'vec3 mv_light_direction = normalize((mvMatrix * vec4(light_direction, 1.0)).xyz);',
     'vec3 eye = normalize(vWorldPos);',
     'vec3 reflection = reflect(mv_light_direction, vNormal);',
     // // 'vec4 frag_diffuse = vec4(.1);',

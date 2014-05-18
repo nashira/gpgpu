@@ -45,11 +45,34 @@
     Program.init(gl);
 
     var width, height;
-    width = height = 1024;
+    width = height = 1200;
+
     var terrainGen = new TerrainGenerator(width, height);
     var terrainVis = new TerrainVisualizer(width, height, w * devicePixelRatio, h * devicePixelRatio);
 
-    var gui = new dat.GUI();    
+    function loadTerrain(lon, lat) {
+
+      Utils.loadFile(lon + lat + '.hgt', function (xhr) {
+        console.log(xhr)
+        var floatBuffer = new Float32Array(width * height * 4);
+        var buffer = new DataView(xhr.response);
+
+        for (var i = 0; i < height; i++) {
+          for (var j = 0; j < width; j++) {
+            var d = buffer.getInt16((i * 1201 + j) * 2, false);
+            // if (d <= 0) d = -100;
+            floatBuffer[(i * width + j) * 4] = d / 32768;
+          }
+        }
+        terrainGen.erosionTarget.texture.setData(floatBuffer);
+      });
+    }
+
+    terrainGen.params.thermalEnabled = false;
+    terrainGen.params.hydraulicEnabled = false;
+    terrainVis.params.renderWater = false;
+
+    var gui = new dat.GUI();
     var folder = gui.addFolder('Visualization');
     folder.add(terrainVis.params, 'renderTerrain');
     folder.add(terrainVis.params, 'renderWater');
@@ -84,7 +107,7 @@
     folder.add(terrainGen.params, 'noiseX');
     folder.add(terrainGen.params, 'noiseY');
     folder.add(terrainGen, 'generate');
-    
+
     var time = 0, count = 0;
     var rm = Matrix.makeYRotation(0);
     var sm = Matrix.makeScale(2, 2, 2);
@@ -92,16 +115,16 @@
     var matrix = [];
     Matrix.multiply(matrix, sm, rm, tm);
 
-    terrainGen.generate();
+    // terrainGen.generate();
     animate();
-    
+
     function animate() {
       time += 0.0005;
       count++;
 
       Matrix.setYRotation(rm, time);
       Matrix.multiply(matrix, sm, rm, tm);
-      
+
       terrainGen.step();
       if (terrainVis.params.renderTerrain) {
         terrainVis.renderTerrain(matrix, terrainGen.erosionTarget.getGlTexture());
@@ -109,11 +132,11 @@
       if (terrainVis.params.renderWater) {
         terrainVis.renderWater(matrix, terrainGen.erosionTarget.getGlTexture());
       }
-      
+
       requestAnimationFrame(animate);
     }
 
-    
+
     var can = document.querySelector('canvas');
     var zoom = 0, spin = 2, down = false;
     window.addEventListener('mousewheel', function (e) {
