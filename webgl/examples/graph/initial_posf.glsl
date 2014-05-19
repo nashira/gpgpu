@@ -5,13 +5,15 @@ varying vec2 vCoords;
 ${noise3d}
 
 float fn(vec3 coords) {
-  return snoise(coords * 1.);
+  return snoise(coords * 2.);
 }
 
 void main() {
-  gl_FragColor = vec4(fn(vec3(vCoords, time)),
+  vec3 pos = vec3(fn(vec3(vCoords, time)),
     fn(vec3(vCoords.y, time, vCoords.x)),
-    fn(vec3(time, vCoords.x, vCoords.y)), 1.);
+    fn(vec3(time, vCoords.x, vCoords.y)));
+
+  gl_FragColor = vec4(pos, 1.);
 
   // gl_FragColor = vec4(time, time, time, 1.);
   // gl_FragColor = vec4(time, time, time, 1.);

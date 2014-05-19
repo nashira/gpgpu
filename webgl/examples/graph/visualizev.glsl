@@ -13,7 +13,7 @@ void main() {
 
   vColor = vec3(1.);
 
-  gl_PointSize = 4.;
+  gl_PointSize = 5.;
 
   gl_Position = matrix * vec4(pos, 1.0);
 }

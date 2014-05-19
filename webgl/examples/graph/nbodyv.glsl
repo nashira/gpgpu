@@ -9,6 +9,7 @@ const float ymax = #{ymax};
 
 uniform sampler2D positionTexture;
 uniform sampler2D previousTexture;
+uniform sampler2D forceTexture;
 
 uniform float xstart;
 uniform float ystart;
@@ -35,13 +36,13 @@ vec3 bruteForce(vec3 pos) {
 void main() {
   vec3 pos = texture2D(positionTexture, coords).xyz;
   vec3 pre = texture2D(previousTexture, coords).xyz;
+  vec3 force = texture2D(forceTexture, coords).xyz;
 
   vec3 f = bruteForce(pos);
-  vec3 npos = 2. * pos - pre + f * dt;
+  // vec3 npos = 2. * pos - pre - f * dt;
+  vec3 npos = pos - f * dt;
 
-  // vPos = clamp(npos, vec3(-1.), vec3(1.));
-
-  vPos = npos;
+  vPos = npos + force;
 
   gl_Position = vec4(coords * 2. - 1., 0.0, 1.0);
 }

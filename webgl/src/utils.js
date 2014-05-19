@@ -3,7 +3,7 @@ var Utils, Matrix;
 (function () {
   Utils = {};
 
-  Utils.getTextureIndecies = function (width, height, limit) {
+  Utils.getTextureIndecies = function (width, height, limit, keepData) {
     limit = limit || (width * height);
     var data = [];
     var dw = 1 / width;
@@ -21,6 +21,7 @@ var Utils, Matrix;
     }
     // console.log('getTextureIndecies', data);
     var db = new DataBuffer(2, limit, new Float32Array(data));
+    if (keepData) db.data = data;
     return db;
   }
 

@@ -27,7 +27,8 @@ var Program;
       this.buildProgram(vertexShader, fragmentShader);
     }
   }
-
+  
+  Program.gl = gl;
   Program.init = function (_gl) {
     gl = _gl;
     DataBuffer.init(gl);

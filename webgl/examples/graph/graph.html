@@ -42,12 +42,12 @@
 
     var ww = window.innerWidth * 2, wh = window.innerHeight * 2;
     var w = wh * 2, h = wh;
-    var numVertices = 128 * 128 * 4;
+    var numVertices = 128;// * 128 * 4;
 
-    var graph = new Graph(numVertices, 1, function () {
+    var graph = new Graph({numVertices: numVertices, numEdges: 128}, 1, function () {
       graph.visualizeProg.setViewport(0, 0, ww, wh);
-      graph.runInitialPos(0.5);
-      graph.runInitialPos(0.5);
+      graph.runInitialPos(0.1);
+      graph.runInitialPos(0.100);
       animate();
     });
 
@@ -63,6 +63,7 @@
       // Matrix.setYRotation(rm, angle += 0.001);
       Matrix.multiply(m, rm, tm, pm);
 
+      graph.runEdges();
       graph.runNbody();
       graph.runVisualize(m);
 
