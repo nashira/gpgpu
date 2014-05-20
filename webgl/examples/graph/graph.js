@@ -13,16 +13,21 @@ var Graph;
 
     this.vertices = {};
     this.edges = [];
-    var data = this.vertCoords.data;
+    var verts = this.vertCoords.data;
 
-    for (var i = 0; i < this.numEdges; i++) {
-      var a = Math.floor(Math.random() * this.numVertices);
-      var b = Math.floor(Math.random() * this.numVertices);
-      this.edges.push(data[a*2], data[a*2+1], data[b*2], data[b*2+1]);
+    for (var i = 0; i < data.edges.length; i+=2) {
+    // for (var i = 0; i < data.numEdges; i++) {
+      // var a = Math.floor(Math.random() * this.numVertices);
+      // var b = Math.floor(Math.random() * this.numVertices);
+      var a = data.edges[i];
+      var b = data.edges[i+1];
+      this.edges.push(verts[a*2], verts[a*2+1], verts[b*2], verts[b*2+1]);
     }
 
+    this.edgeCoords = new DataBuffer(4, this.numEdges, new Float32Array(this.edges));
+
     this.vDt = 0.0001;
-    this.eDt = 0.01;
+    this.eDt = 0.05;
 
     this.init(onLoad);
   }
@@ -58,7 +63,6 @@ var Graph;
       this.initialPosProg.addUniform('time', 'f', 0);
       this.initialPosProg.setViewport(0, 0, this.itemTS.w, this.itemTS.h);
       this.positionTarget = new RenderTarget(size.w, size.h, {type: gl.FLOAT});
-      this.previousTarget = new RenderTarget(size.w, size.h, {type: gl.FLOAT});
       this.forceTarget = new RenderTarget(size.w, size.h, {type: gl.FLOAT});
       this.tempTarget = new RenderTarget(size.w, size.h, {type: gl.FLOAT});
     },
@@ -77,12 +81,12 @@ var Graph;
 
       this.nbodyProg.addAttribute('coords', 2, gl.FLOAT, this.vertCoords);
       this.nbodyProg.addUniform('positionTexture', 't');
-      this.nbodyProg.addUniform('previousTexture', 't');
-      this.nbodyProg.addUniform('forceTexture', 't');
+      this.nbodyProg.addUniform('forceTexture', 't',
+          this.forceTarget.getGlTexture());
 
       this.nbodyProg.addUniform('xstart', 'f', 0);
       this.nbodyProg.addUniform('ystart', 'f', 0);
-      this.nbodyProg.addUniform('dt', 'f', this.vDt * this.downsample);
+      this.nbodyProg.addUniform('dt', 'f');
       this.nbodyProg.setViewport(0, 0, this.itemTS.w, this.itemTS.h);
     },
 
@@ -93,7 +97,6 @@ var Graph;
         // blendFunc: [gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA],
         depthTest: false
       });
-      this.edgeCoords = new DataBuffer(4, this.numEdges, new Float32Array(this.edges));
 
       this.edgeProg.addAttribute('coords', 4, gl.FLOAT, this.edgeCoords);
       this.edgeProg.addUniform('positionTexture', 't');
@@ -125,11 +128,7 @@ var Graph;
     runNbody: function () {
       this.nbodyProg.setUniform('positionTexture',
           this.positionTarget.getGlTexture());
-      this.nbodyProg.setUniform('previousTexture',
-          this.previousTarget.getGlTexture());
-      this.nbodyProg.setUniform('forceTexture',
-          this.forceTarget.getGlTexture());
-      this.nbodyProg.setUniform('dt', this.vDt);
+      this.nbodyProg.setUniform('dt', this.vDt * this.downsample / 100);
       this.nbodyProg.setUniform('xstart', this.downsampleIdx / this.itemTS.w);
       this.nbodyProg.setUniform('ystart', this.downsampleIdx / this.itemTS.h);
       this.nbodyProg.setRenderTarget(this.tempTarget);
@@ -146,7 +145,6 @@ var Graph;
       this.edgeProg.setUniform('dt', this.eDt);
 
       this.edgeProg.clear = gl.COLOR_BUFFER_BIT;
-      // console.log(this.edgeProg.clear)
       this.edgeProg.draw(0, this.numEdges);
 
       this.edgeProg.setUniform('forceDir', 1);
@@ -171,8 +169,7 @@ var Graph;
     },
 
     swapTargets: function () {
-      var t = this.previousTarget;
-      this.previousTarget = this.positionTarget;
+      var t = this.positionTarget;
       this.positionTarget = this.tempTarget;
       this.tempTarget = t;
     }
