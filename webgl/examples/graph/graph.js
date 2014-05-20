@@ -5,16 +5,19 @@ var Graph;
     this.numVertices = data.numVertices;
     this.numEdges = data.numEdges;
     this.downsample =
-        Math.floor(numVertices * ((downsample || 0) * 0.00015)) + 1;
+        Math.floor(this.numVertices * ((downsample || 0) * 0.00015)) + 1;
     this.downsampleIdx = 0;
-    this.itemTS = Utils.getPotSize(numVertices);
+    this.itemTS = Utils.getPotSize(this.numVertices);
     this.vertCoords = Utils.getTextureIndecies(
-      this.itemTS.w, this.itemTS.h, this.numVertices, true);
+        this.itemTS.w,
+        this.itemTS.h,
+        this.numVertices,
+        true);
 
     this.vertices = {};
     this.edges = [];
-    var verts = this.vertCoords.data;
 
+    var verts = this.vertCoords.data;
     for (var i = 0; i < data.edges.length; i+=2) {
     // for (var i = 0; i < data.numEdges; i++) {
       // var a = Math.floor(Math.random() * this.numVertices);
@@ -23,8 +26,13 @@ var Graph;
       var b = data.edges[i+1];
       this.edges.push(verts[a*2], verts[a*2+1], verts[b*2], verts[b*2+1]);
     }
+    var c = [];
+    for (i = 0; i < this.numVertices * 3; i++) {
+      c.push(Math.random());
+    }
 
     this.edgeCoords = new DataBuffer(4, this.numEdges, new Float32Array(this.edges));
+    this.vertColors = new DataBuffer(4, this.numVertices, new Float32Array(c));
 
     this.vDt = 0.0001;
     this.eDt = 0.05;
@@ -41,14 +49,17 @@ var Graph;
         './nbodyf.glsl',
         './edge_forcev.glsl',
         './edge_forcef.glsl',
-        './visualizev.glsl',
-        './visualizef.glsl'], function (shaders) {
+        './draw_verticesv.glsl',
+        './draw_verticesf.glsl',
+        './draw_edgesv.glsl',
+        './draw_edgesf.glsl'], function (shaders) {
 
           var sid = 0;
           this.initInitialPos(shaders[sid++], shaders[sid++]);
           this.initNbody(shaders[sid++], shaders[sid++]);
           this.initEdges(shaders[sid++], shaders[sid++]);
-          this.initVisualize(shaders[sid++], shaders[sid++]);
+          this.initDrawVertices(shaders[sid++], shaders[sid++]);
+          this.initDrawEdges(shaders[sid++], shaders[sid++]);
 
         if (onLoad) {
           onLoad();
@@ -94,7 +105,6 @@ var Graph;
       this.edgeProg = new Program(vert, frag, {
         drawMode: gl.POINTS,
         blendEnabled: true,
-        // blendFunc: [gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA],
         depthTest: false
       });
 
@@ -106,16 +116,31 @@ var Graph;
       this.edgeProg.setRenderTarget(this.forceTarget);
     },
 
-    initVisualize: function (vert, frag) {
+    initDrawVertices: function (vert, frag) {
       var size = this.itemTS;
-      this.visualizeProg = new Program(vert, frag, {
+      this.drawVerticesProg = new Program(vert, frag, {
           drawMode: gl.POINTS,
           blendEnabled: true,
           depthTest: false
         });
-      this.visualizeProg.addUniform('positionTexture', 't');
-      this.visualizeProg.addUniform('matrix', 'm4');
-      this.visualizeProg.addAttribute('coords', 2, gl.FLOAT, this.vertCoords);
+      this.drawVerticesProg.addUniform('positionTexture', 't');
+      this.drawVerticesProg.addUniform('matrix', 'm4');
+      this.drawVerticesProg.addAttribute('coords', 2, gl.FLOAT, this.vertCoords);
+      this.drawVerticesProg.addAttribute('color', 3, gl.FLOAT, this.vertColors);
+    },
+
+    initDrawEdges: function (vert, frag) {
+      var size = this.itemTS;
+      this.drawEdgesProg = new Program(vert, frag, {
+          drawMode: gl.LINES,
+          blendEnabled: true,
+          depthTest: false,
+          clear: false
+        });
+      this.drawEdgesProg.addUniform('positionTexture', 't');
+      this.drawEdgesProg.addUniform('matrix', 'm4');
+      this.drawEdgesProg.addAttribute('coords', 2, gl.FLOAT, this.edgeCoords);
+      // this.drawEdgesProg.addAttribute('color', 4, gl.FLOAT, this.vertColors);
     },
 
     runInitialPos: function (time) {
@@ -153,19 +178,18 @@ var Graph;
       this.edgeProg.draw(0, this.numEdges);
     },
 
-    runVisualize: function (matrix) {
-      this.visualizeProg.clear = (gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-      this.visualizeProg.drawMode = gl.POINTS;
-      this.visualizeProg.setUniform('positionTexture',
+    drawVertices: function (matrix) {
+      this.drawVerticesProg.setUniform('positionTexture',
           this.positionTarget.getGlTexture());
-      this.visualizeProg.setUniform('matrix', matrix);
-      this.visualizeProg.setAttribute('coords', this.vertCoords);
-      this.visualizeProg.draw(0, this.numVertices);
+      this.drawVerticesProg.setUniform('matrix', matrix);
+      this.drawVerticesProg.draw(0, this.numVertices);
+    },
 
-      this.visualizeProg.clear = false;
-      this.visualizeProg.drawMode = gl.LINES;
-      this.visualizeProg.setAttribute('coords', this.edgeCoords);
-      this.visualizeProg.draw(0, this.numEdges * 2);
+    drawEdges: function (matrix) {
+      this.drawEdgesProg.setUniform('positionTexture',
+          this.positionTarget.getGlTexture());
+      this.drawEdgesProg.setUniform('matrix', matrix);
+      this.drawEdgesProg.draw(0, this.numEdges * 2);
     },
 
     swapTargets: function () {
