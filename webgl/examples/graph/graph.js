@@ -1,65 +1,106 @@
+
 var Graph;
 
 (function () {
-  Graph = function (data, downsample, onLoad) {
-    this.numVertices = data.numVertices;
-    this.numEdges = data.numEdges;
-    this.downsample =
-        Math.floor(this.numVertices * ((downsample || 0) * 0.00015)) + 1;
-    this.downsampleIdx = 0;
-    this.itemTS = Utils.getPotSize(this.numVertices);
-    this.vertCoords = Utils.getTextureIndecies(
-        this.itemTS.w,
-        this.itemTS.h,
-        this.numVertices,
-        true);
+  var gl;
 
-    this.vertices = {};
-    this.edges = [];
-
-    var verts = this.vertCoords.data;
-    for (var i = 0; i < data.edges.length; i+=2) {
-    // for (var i = 0; i < data.numEdges; i++) {
-      // var a = Math.floor(Math.random() * this.numVertices);
-      // var b = Math.floor(Math.random() * this.numVertices);
-      var a = data.edges[i];
-      var b = data.edges[i+1];
-      this.edges.push(verts[a*2], verts[a*2+1], verts[b*2], verts[b*2+1]);
-    }
-    var colors;
-    if (data.vertexColors) {
-      colors = data.vertexColors;
-    } else {
-      colors = [];
-      for (i = 0; i < this.numVertices * 3; i++) {
-        colors.push(Math.random());
-      }
-    }
-
-    this.edgeCoords = new DataBuffer(4, this.numEdges, new Float32Array(this.edges));
-    this.vertColors = new DataBuffer(4, this.numVertices, new Float32Array(colors));
+  Graph = function () {
 
     this.vDt = 0.01;
     this.eDt = 0.0005;
     this.pointSize = 2;
+  }
 
-    this.init(onLoad);
+  Graph.init = function (_gl) {
+    gl = _gl;
   }
 
   Graph.prototype = {
-    init: function (onLoad) {
-      Utils.loadShaders([
-        './initial_posv.glsl',
-        './initial_posf.glsl',
-        './nbodyv.glsl',
-        './nbodyf.glsl',
-        './edge_forcev.glsl',
-        './edge_forcef.glsl',
-        './draw_verticesv.glsl',
-        './draw_verticesf.glsl',
-        './draw_edgesv.glsl',
-        './draw_edgesf.glsl'], function (shaders) {
+    load: function (data, downsample, onLoad) {
+      if (this.positionTarget) {
+        gl.deleteFramebuffer(this.positionTarget.framebuffer)
+        gl.deleteTexture(this.positionTarget.getGlTexture())
+        gl.deleteFramebuffer(this.forceTarget.framebuffer)
+        gl.deleteTexture(this.forceTarget.getGlTexture())
+        gl.deleteFramebuffer(this.tempTarget.framebuffer)
+        gl.deleteTexture(this.tempTarget.getGlTexture())
+        gl.deleteBuffer(this.edgeCoords.glBuffer);
+        gl.deleteBuffer(this.vertCoords.glBuffer);
+        gl.deleteBuffer(this.vertColors.glBuffer);
+      }
 
+      this.numVertices = data.numVertices;
+      this.numEdges = data.numEdges;
+      this.downsample =
+          Math.floor(this.numVertices * ((downsample || 0) * 0.00015)) + 1;
+      this.downsampleIdx = 0;
+      this.itemTS = Utils.getPotSize(this.numVertices);
+      this.vertCoords = Utils.getTextureIndecies(
+          this.itemTS.w,
+          this.itemTS.h,
+          this.numVertices,
+          true);
+
+      this.vertices = {};
+      this.edges = [];
+
+      var verts = this.vertCoords.data;
+      for (var i = 0; i < data.edges.length; i+=2) {
+      // for (var i = 0; i < data.numEdges; i++) {
+        // var a = Math.floor(Math.random() * this.numVertices);
+        // var b = Math.floor(Math.random() * this.numVertices);
+        var a = data.edges[i];
+        var b = data.edges[i+1];
+        this.edges.push(verts[a*2], verts[a*2+1], verts[b*2], verts[b*2+1]);
+      }
+      var colors;
+      if (data.vertexColors) {
+        colors = data.vertexColors;
+      } else {
+        colors = [];
+        for (i = 0; i < this.numVertices * 3; i++) {
+          colors.push(Math.random());
+        }
+      }
+
+      this.edgeCoords = new DataBuffer(4, this.numEdges, new Float32Array(this.edges));
+      this.vertColors = new DataBuffer(4, this.numVertices, new Float32Array(colors));
+      var size = this.itemTS;
+      this.positionTarget = new RenderTarget(size.w, size.h, {type: gl.FLOAT});
+      this.forceTarget = new RenderTarget(size.w, size.h, {type: gl.FLOAT});
+      this.tempTarget = new RenderTarget(size.w, size.h, {type: gl.FLOAT});
+
+      this.init(onLoad);
+    },
+
+    init: function (onLoad) {
+      if (this.shaders) {
+        gl.deleteProgram(this.nbodyProg.glProgram);
+        this.initNbody(this.shaders[2], this.shaders[3]);
+        this.initialPosProg.setViewport(0, 0, this.itemTS.w, this.itemTS.h);
+        this.edgeProg.setAttribute('coords', this.edgeCoords);
+        this.edgeProg.setViewport(0, 0, this.itemTS.w, this.itemTS.h);
+        this.edgeProg.setRenderTarget(this.forceTarget);
+        this.drawVerticesProg.setAttribute('coords', this.vertCoords);
+        this.drawVerticesProg.setAttribute('color', this.vertColors);
+        this.drawEdgesProg.setAttribute('coords', this.edgeCoords);
+        this.initialPosProg.setAttribute('coords', this.vertCoords);
+        onLoad();
+        return;
+      }
+
+      Utils.loadShaders([
+        '../graph/initial_posv.glsl',
+        '../graph/initial_posf.glsl',
+        '../graph/nbodyv.glsl',
+        '../graph/nbodyf.glsl',
+        '../graph/edge_forcev.glsl',
+        '../graph/edge_forcef.glsl',
+        '../graph/draw_verticesv.glsl',
+        '../graph/draw_verticesf.glsl',
+        '../graph/draw_edgesv.glsl',
+        '../graph/draw_edgesf.glsl'], function (shaders) {
+          this.shaders = shaders;
           var sid = 0;
           this.initInitialPos(shaders[sid++], shaders[sid++]);
           this.initNbody(shaders[sid++], shaders[sid++]);
@@ -74,14 +115,10 @@ var Graph;
     },
 
     initInitialPos: function (vert, frag) {
-      var size = this.itemTS;
       this.initialPosProg = new Program(vert, frag, {drawMode: gl.POINTS});
       this.initialPosProg.addAttribute('coords', 2, gl.FLOAT, this.vertCoords);
       this.initialPosProg.addUniform('time', 'f', 0);
       this.initialPosProg.setViewport(0, 0, this.itemTS.w, this.itemTS.h);
-      this.positionTarget = new RenderTarget(size.w, size.h, {type: gl.FLOAT});
-      this.forceTarget = new RenderTarget(size.w, size.h, {type: gl.FLOAT});
-      this.tempTarget = new RenderTarget(size.w, size.h, {type: gl.FLOAT});
     },
 
     initNbody: function (vert, frag) {
@@ -129,6 +166,8 @@ var Graph;
           blendEnabled: true,
           depthTest: false
         });
+      var vertTex = new Texture(64, 64, {image: '../lib/sphere.png'});
+      this.drawVerticesProg.addUniform('vertTex', 't', vertTex.glTexture);
       this.drawVerticesProg.addUniform('positionTexture', 't');
       this.drawVerticesProg.addUniform('matrix', 'm4');
       this.drawVerticesProg.addUniform('pointSize', 'f', this.pointSize);

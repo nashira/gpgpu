@@ -1,4 +1,32 @@
-var Utils, Matrix;
+/*
+Quaternions License:
+
+The MIT License
+
+Copyright &copy; 2010-2014 three.js authors
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+*/
+
+
+
+var Utils, Matrix, Camera, Quaternion;
 
 (function () {
   Utils = {};
@@ -40,7 +68,7 @@ var Utils, Matrix;
   Utils.loadImage = function (url, onLoad) {
     var image = new Image();
     image.onload = function () {
-      onLoad(cubeImage);
+      onLoad(image);
     };
     image.src = url;
   }
@@ -90,13 +118,220 @@ var Utils, Matrix;
       xhr.open('GET', url+'?'+Math.random(), true);
       xhr.send();
     });
-
-    // function finish() {
-    //   results.forEach(function (r) {
-    //
-    //   })
-    // }
   }
+
+  Camera = function (fov, aspect, near, far) {
+    this.position = [0, 0, -1];
+    this.lookAt = [0, 0, 0];
+    this.up = [0, 1, 0];
+    this.quaternion = new Quaternion();
+    this.tmpQuat = new Quaternion();
+
+    this.perspective = Matrix.makePerspective(fov, aspect, near, far);
+    this.world = [];
+    this.matrix = [];
+    this.v1 = [];
+    this.v2 = [];
+    this.v3 = [];
+
+    this._lookAt();
+    this.updateMatrix();
+  }
+
+  function norm(a, r) {
+    r = r || a;
+    var sqrt = Math.sqrt(a[0]*a[0] + a[1]*a[1] + a[2]*a[2]);
+    r[0] = a[0]/sqrt;
+    r[1] = a[1]/sqrt;
+    r[2] = a[2]/sqrt;
+    return r;
+  }
+
+  function minus(a, b, r) {
+    r[0] = a[0] - b[0];
+    r[1] = a[1] - b[1];
+    r[2] = a[2] - b[2];
+    return r;
+  }
+
+  function add(a, b, r) {
+    r[0] = a[0] + b[0];
+    r[1] = a[1] + b[1];
+    r[2] = a[2] + b[2];
+    return r;
+  }
+
+  function mults(a, s) {
+    a[0] = a[0] * s;
+    a[1] = a[1] * s;
+    a[2] = a[2] * s;
+    return a;
+  }
+
+  function cross(a, b, r) {
+    r[0] = a[1] * b[2] - a[2] * b[1];
+    r[1] = a[2] * b[0] - a[0] * b[2];
+    r[2] = a[0] * b[1] - a[1] * b[0];
+    return r;
+  }
+
+  function dot(a, b) {
+    return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+  }
+
+  Camera.prototype = {
+    updateMatrix: function () {
+      Matrix.multiplyMatrix(this.world, this.perspective, this.matrix);
+    },
+
+    setPosition: function (x, y, z) {
+      this.position[0] = x;
+      this.position[1] = y;
+      this.position[2] = z;
+    },
+
+    setLookAt: function (x, y, z) {
+      this.lookAt[0] = x;
+      this.lookAt[1] = y;
+      this.lookAt[2] = z;
+    },
+
+    zoom: function (z) {
+      var a = minus(this.position, this.lookAt, this.v1);
+      mults(a, z);
+      add(this.lookAt, a, this.position);
+      this._lookAt()
+      this.updateMatrix();
+    },
+
+    orbit: function (x, y) {
+      var a = this.v1;
+      a[0] = x;
+      a[1] = y;
+      a[2] = 0;
+      this.quaternion.rotVec(a);
+      this.tmpQuat.fromEuler(a[0], a[1], a[2]);
+      minus(this.position, this.lookAt, a);
+      this.tmpQuat.rotVec(a);
+      add(this.lookAt, a, this.position);
+      this.tmpQuat.rotVec(this.up);
+
+      this.tmpQuat.fromEuler(x, y, 0);
+      this.quaternion.multiply(this.tmpQuat);
+
+      this._lookAt()
+      this.updateMatrix();
+    },
+
+    _lookAt: function () {
+      var eye = this.position;
+      var at = this.lookAt;
+      var up = this.up;
+
+      var zaxis = norm(minus(eye, at, this.v1));
+      var xaxis = norm(cross(up, zaxis, this.v2));
+      var yaxis = cross(zaxis, xaxis, this.v3);
+
+      this.world[0] = xaxis[0]; this.world[1] = yaxis[0];
+      this.world[2] = zaxis[0]; this.world[3] = 0;
+      this.world[4] = xaxis[1]; this.world[5] = yaxis[1];
+      this.world[6] = zaxis[1]; this.world[7] = 0;
+      this.world[8] = xaxis[2]; this.world[9] = yaxis[2];
+      this.world[10] = zaxis[2]; this.world[11] = 0;
+      this.world[12] = -dot(xaxis, eye); this.world[13] = -dot(yaxis, eye);
+      this.world[14] = -dot(zaxis, eye); this.world[15] = 1;
+    }
+  };
+
+  Quaternion = function (x, y, z, w) {
+    this.x = x || 0;
+    this.y = y || 0;
+    this.z = z || 0;
+    this.w = ( w !== undefined ) ? w : 1;
+  };
+
+  Quaternion.prototype = {
+    fromAngle: function (x, y, z, angle) {
+      var halfAngle = angle / 2, s = Math.sin(halfAngle);
+
+      this.x = x * s;
+      this.y = y * s;
+      this.z = z * s;
+      this.w = Math.cos(halfAngle);
+    },
+
+    fromEuler: function (x, y, z) {
+      var c1 = Math.cos(x / 2);
+      var c2 = Math.cos(y / 2);
+      var c3 = Math.cos(z / 2);
+      var s1 = Math.sin(x / 2);
+      var s2 = Math.sin(y / 2);
+      var s3 = Math.sin(z / 2);
+      this.x = s1 * c2 * c3 + c1 * s2 * s3;
+      this.y = c1 * s2 * c3 - s1 * c2 * s3;
+      this.z = c1 * c2 * s3 + s1 * s2 * c3;
+      this.w = c1 * c2 * c3 - s1 * s2 * s3;
+    },
+
+    length: function () {
+      return Math.sqrt(this.x * this.x + this.y * this.y + this.z * this.z + this.w * this.w);
+    },
+
+    normalize: function () {
+      var l = this.length();
+      if (l == 0) {
+        this.x = 0;
+        this.y = 0;
+        this.z = 0;
+        this.w = 1;
+      } else {
+        l = 1 / l;
+        this.x = this.x * l;
+        this.y = this.y * l;
+        this.z = this.z * l;
+        this.w = this.w * l;
+      }
+    },
+
+    multiply: function (b) {
+      var a = this;
+      var qax = a.x, qay = a.y, qaz = a.z, qaw = a.w;
+      var qbx = b.x, qby = b.y, qbz = b.z, qbw = b.w;
+
+      this.x = qax * qbw + qaw * qbx + qay * qbz - qaz * qby;
+      this.y = qay * qbw + qaw * qby + qaz * qbx - qax * qbz;
+      this.z = qaz * qbw + qaw * qbz + qax * qby - qay * qbx;
+      this.w = qaw * qbw - qax * qbx - qay * qby - qaz * qbz;
+    },
+
+    rotVec: function (v) {
+      var x = v[0];
+      var y = v[1];
+      var z = v[2];
+
+      var qx = this.x;
+      var qy = this.y;
+      var qz = this.z;
+      var qw = this.w;
+
+      var ix =  qw * x + qy * z - qz * y;
+      var iy =  qw * y + qz * x - qx * z;
+      var iz =  qw * z + qx * y - qy * x;
+      var iw = -qx * x - qy * y - qz * z;
+
+      v[0] = ix * qw + iw * -qx + iy * -qz - iz * -qy;
+      v[1] = iy * qw + iw * -qy + iz * -qx - ix * -qz;
+      v[2] = iz * qw + iw * -qz + ix * -qy - iy * -qx;
+    },
+
+    invert: function () {
+      this.x *= -1;
+      this.y *= -1;
+      this.z *= -1;
+      this.normalize();
+      return this;
+    }
+  };
 
   Matrix = {
 

@@ -28,7 +28,7 @@ vec3 bruteForce(vec3 pos) {
       f += diff / a;
     }
   }
-  return f * 0.001;
+  return f * 0.01;
 }
 
 void main() {
