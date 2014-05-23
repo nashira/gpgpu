@@ -87,7 +87,7 @@ var Utils, Matrix;
         }
       }
 
-      xhr.open('GET', url, true);
+      xhr.open('GET', url+'?'+Math.random(), true);
       xhr.send();
     });
 

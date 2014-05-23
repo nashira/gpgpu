@@ -18,18 +18,17 @@ attribute vec2 coords;
 
 varying vec3 vPos;
 
-
 vec3 bruteForce(vec3 pos) {
   vec3 f = vec3(0.);
   for (float y = yiter; y < ymax; y += ysize) {
     for (float x = xiter; x < 1.0; x += xsize) {
       vec4 otherPosition = texture2D(positionTexture, vec2(x + xstart, y + ystart));
       vec3 diff = otherPosition.xyz - pos.xyz;
-      float a = dot(diff, diff) + 0.0001;
+      float a = dot(diff, diff) + 0.000001;
       f += diff / a;
     }
   }
-  return f;
+  return f * 0.001;
 }
 
 void main() {

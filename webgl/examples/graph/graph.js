@@ -26,16 +26,22 @@ var Graph;
       var b = data.edges[i+1];
       this.edges.push(verts[a*2], verts[a*2+1], verts[b*2], verts[b*2+1]);
     }
-    var c = [];
-    for (i = 0; i < this.numVertices * 3; i++) {
-      c.push(Math.random());
+    var colors;
+    if (data.vertexColors) {
+      colors = data.vertexColors;
+    } else {
+      colors = [];
+      for (i = 0; i < this.numVertices * 3; i++) {
+        colors.push(Math.random());
+      }
     }
 
     this.edgeCoords = new DataBuffer(4, this.numEdges, new Float32Array(this.edges));
-    this.vertColors = new DataBuffer(4, this.numVertices, new Float32Array(c));
+    this.vertColors = new DataBuffer(4, this.numVertices, new Float32Array(colors));
 
-    this.vDt = 0.0001;
-    this.eDt = 0.05;
+    this.vDt = 0.01;
+    this.eDt = 0.0005;
+    this.pointSize = 2;
 
     this.init(onLoad);
   }
@@ -125,6 +131,7 @@ var Graph;
         });
       this.drawVerticesProg.addUniform('positionTexture', 't');
       this.drawVerticesProg.addUniform('matrix', 'm4');
+      this.drawVerticesProg.addUniform('pointSize', 'f', this.pointSize);
       this.drawVerticesProg.addAttribute('coords', 2, gl.FLOAT, this.vertCoords);
       this.drawVerticesProg.addAttribute('color', 3, gl.FLOAT, this.vertColors);
     },
@@ -153,7 +160,7 @@ var Graph;
     runNbody: function () {
       this.nbodyProg.setUniform('positionTexture',
           this.positionTarget.getGlTexture());
-      this.nbodyProg.setUniform('dt', this.vDt * this.downsample / 100);
+      this.nbodyProg.setUniform('dt', this.vDt * this.downsample);
       this.nbodyProg.setUniform('xstart', this.downsampleIdx / this.itemTS.w);
       this.nbodyProg.setUniform('ystart', this.downsampleIdx / this.itemTS.h);
       this.nbodyProg.setRenderTarget(this.tempTarget);
@@ -182,6 +189,7 @@ var Graph;
       this.drawVerticesProg.setUniform('positionTexture',
           this.positionTarget.getGlTexture());
       this.drawVerticesProg.setUniform('matrix', matrix);
+      this.drawVerticesProg.setUniform('pointSize', this.pointSize);
       this.drawVerticesProg.draw(0, this.numVertices);
     },
 

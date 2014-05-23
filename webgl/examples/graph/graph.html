@@ -21,6 +21,8 @@
 <body>
   <canvas id="canvas"></canvas>
 
+  <script src='../lib/dat.gui.min.js'></script>
+  <script src='../lib/esprima.js'></script>
   <script src='../../src/program.js'></script>
   <script src='../../src/databuffer.js'></script>
   <script src='../../src/indexbuffer.js'></script>
@@ -42,30 +44,207 @@
 
     var ww = window.innerWidth * 2, wh = window.innerHeight * 2;
     var w = wh * 2, h = wh;
-    var numVertices = 128;// * 128 * 4;
 
-    var graph = new Graph({numVertices: numVertices, numEdges: 128}, 1, function () {
-      graph.visualizeProg.setViewport(0, 0, ww, wh);
-      graph.runInitialPos(0.1);
-      graph.runInitialPos(0.100);
-      animate();
+    var params = {
+      renderEdges: true,
+      renderVertices: true,
+      edgeForces: true,
+      vertexForces: true
+    }
+
+    var Colors = {
+        AssignmentExpression: [100.0, 4.0, 4.0],
+        ArrayExpression: [92.0, 12.0, 12.0],
+        BlockStatement: [84.0, 20.0, 20.0],
+        BinaryExpression: [100.0, 33.0, 4.0],
+        BreakStatement: [94.0, 38.0, 11.0],
+        CallExpression: [86.0, 40.0, 18.0],
+        CatchClause: [100.0, 59.0, 4.0],
+        ConditionalExpression: [95.0, 61.0, 9.0],
+        ContinueStatement: [87.0, 62.0, 17.0],
+        DebuggerStatement: [100.0, 93.0, 4.0],
+        DirectiveStatement: [13.0, 91.0, 66.0],
+        DoWhileStatement: [4.0, 100.0, 62.0],
+        EmptyStatement: [22.0, 82.0, 43.0],
+        ExpressionStatement: [13.0, 92.0, 46.0],
+        ForStatement: [4.0, 100.0, 35.0],
+        ForInStatement: [24.0, 89.0, 15.0],
+        FunctionDeclaration: [14.0, 100.0, 4.0],
+        FunctionExpression: [58.0, 92.0, 12.0],
+        Identifier: [59.0, 100.0, 4.0],
+        IfStatement: [89.0, 91.0, 13.0],
+        Literal: [20.0, 84.0, 81.0],
+        LabeledStatement: [35.0, 77.0, 81.0],
+        LogicalExpression: [34.0, 65.0, 82.0],
+        MemberExpression: [17.0, 65.0, 100.0],
+        NewExpression: [29.0, 36.0, 88.0],
+        ObjectExpression: [0.0, 7.0, 99.0],
+        Program: [27.0, 0.0, 99.0],
+        Property: [38.0, 9.0, 89.0],
+        ReturnStatement: [45.0, 20.0, 74.0],
+        SequenceExpression: [66.0, 0.0, 94.0],
+        SwitchStatement: [87.0, 22.0, 49.0],
+        SwitchCase: [100.0, 16.0, 62.0],
+        ThisExpression: [100.0, 16.0, 94.0],
+        ThrowStatement: [87.0, 15.0, 85.0],
+        TryStatement: [77.0, 25.0, 77.0],
+        UnaryExpression: [69.0, 38.0, 76.0],
+        UpdateExpression: [71.0, 8.0, 86.0],
+        VariableDeclaration: [100.0, 52.0, 52.0],
+        VariableDeclarator: [98.0, 100.0, 68.0],
+        WhileStatement: [91.0, 65.0, 97.0],
+        WithStatement: [89.0, 91.0, 90.0]
+    };
+
+    function getSource(scripts, callback) {
+
+      var code = '';
+      // var scripts = document.getElementsByTagName('script');
+      // var scripts = urls;
+      var called = scripts.length;
+      var i = 0, s;
+      while (s = scripts[i++]) {
+        (function () {
+          if (s.textContent) {
+            called--;
+            // console.log('textContent', s.textContent)
+            code += s.textContent + '\n';
+          } else {
+            var xhr = new XMLHttpRequest();
+            xhr.onreadystatechange = function () {
+              if (xhr.readyState == xhr.DONE) {
+                code += xhr.responseText + '\n';
+                  called--;
+                if (called == 0) {
+                  callback(code);
+                }
+              }
+            }
+            xhr.open('GET', s, true);
+            xhr.send();
+          }
+        }());
+      }
+      console.log(scripts)
+
+      // if (count == 0) {
+      //   callback(code);
+      // }
+    }
+
+    function buildTree(src) {
+      var tree = esprima.parse(src);
+      console.log(tree)
+      var vertexId = 0;
+      var colorStack = [[100, 100, 100]];
+      var stack = [0];
+      var edges = [];
+      var colors = [];
+      traverse(tree, {
+        enter: function (obj) {
+          var id = ++vertexId;
+          if (obj.type in Colors) {
+            colorStack.push(Colors[obj.type]);
+          }
+          var clr = colorStack[colorStack.length - 1];
+          colors.push(clr[0]/100, clr[1]/100, clr[2]/100);
+          edges.push(stack[stack.length - 1], id);
+          stack.push(id);
+        },
+        exit: function (obj) {
+          stack.pop();
+          if (obj.type in Colors) {
+            colorStack.pop();
+          }
+        }
+      });
+      return [vertexId, edges, colors];
+    }
+
+    // Executes visitor on the object and its children (recursively).
+    function traverse(object, visitor) {
+        var key, child;
+
+        if (visitor.enter.call(null, object) === false) {
+            return;
+        }
+        for (key in object) {
+            if (object.hasOwnProperty(key)) {
+                child = object[key];
+                if (typeof child === 'object' && child !== null) {
+                    traverse(child, visitor);
+                }
+            }
+        }
+        if (visitor.exit.call(null, object) === false) {
+            return;
+        }
+    }
+
+    var graph;
+    getSource([
+      // './graph.js',
+      // '../../src/program.js',
+      // '../../src/databuffer.js',
+      // '../../src/indexbuffer.js',
+      // '../../src/rendertarget.js',
+      // '../../src/texture.js'
+      // '../lib/three.js'
+      // '//ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js'
+      // '//ajax.googleapis.com/ajax/libs/jquerymobile/1.4.2/jquery.mobile.min.js'
+      '//ajax.googleapis.com/ajax/libs/angularjs/1.2.15/angular.min.js'
+      ], function (code) {
+      var data = buildTree(code);
+      console.log(data)
+      createGraph(data[0], data[1], data[2]);
     });
+
+    function createGraph(numVertices, edges, colors) {
+      graph = new Graph({
+        numVertices: numVertices,
+        numEdges: edges.length / 2,
+        edges: edges,
+        vertexColors: colors
+      }, 1.5, function () {
+        graph.drawVerticesProg.setViewport(0, 0, ww, wh);
+        graph.drawEdgesProg.setViewport(0, 0, ww, wh);
+        graph.runInitialPos(0.1);
+        animate();
+      });
+      var gui = new dat.GUI();
+      gui.add(graph, 'vDt', 0, 1);
+      gui.add(graph, 'eDt', 0, .4);
+      gui.add(graph, 'pointSize', 0, 20);
+      gui.add(params, 'vertexForces');
+      gui.add(params, 'edgeForces');
+      gui.add(params, 'renderEdges');
+      gui.add(params, 'renderVertices');
+    }
 
     var angle = 0, m = [];
     var rm = Matrix.makeYRotation(angle);
-    var tm = Matrix.makeTranslation(0, 0, -5);
-    var pm = Matrix.makePerspective(0.6, window.innerWidth / window.innerHeight, 0.1, 100);
+    var tm = Matrix.makeTranslation(0, 0, -300);
+    var pm = Matrix.makePerspective(0.6, window.innerWidth / window.innerHeight, 1, 10000);
 
     var time = -1;
     function animate() {
-      time += 0.001;
+      time += 0.0001;
       // if (time > 1) time = -1;
-      // Matrix.setYRotation(rm, angle += 0.001);
+      Matrix.setYRotation(rm, angle += 0.00005);
       Matrix.multiply(m, rm, tm, pm);
 
-      graph.runEdges();
-      graph.runNbody();
-      graph.runVisualize(m);
+      if (params.edgeForces) {
+        graph.runEdges();
+      }
+      if (params.vertexForces) {
+        graph.runNbody();
+      }
+      if (params.renderVertices) {
+        graph.drawVertices(m);
+      }
+      if (params.renderEdges){
+        graph.drawEdges(m);
+      }
 
       requestAnimationFrame(animate);
     }

@@ -3,6 +3,7 @@ precision highp float;
 
 uniform sampler2D positionTexture;
 uniform mat4 matrix;
+uniform float pointSize;
 
 attribute vec2 coords;
 attribute vec3 color;
@@ -14,7 +15,7 @@ void main() {
 
   vColor = color;
 
-  gl_PointSize = 5.;
+  gl_PointSize = pointSize;
 
   gl_Position = matrix * vec4(pos, 1.0);
 }

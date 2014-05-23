@@ -13,7 +13,7 @@ void main() {
     fn(vec3(vCoords.y, time, vCoords.x)),
     fn(vec3(time, vCoords.x, vCoords.y)));
 
-  gl_FragColor = vec4(pos * .5, 1.);
+  gl_FragColor = vec4(normalize(pos) * 500., 1.);
 
   // gl_FragColor = vec4(time, time, time, 1.);
   // gl_FragColor = vec4(time, time, time, 1.);
