@@ -1,17 +1,17 @@
 // some portions are licensed by:
 // Copyright (C) 2011 by Ashima Arts (Simplex noise)
 // Copyright (C) 2011 by Stefan Gustavson (Classic noise)
-// 
+//
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
 // to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions:
-// 
+//
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
-// 
+//
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 // FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -20,10 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-var ShaderLib;
-
-(function () {
-  ShaderLib = {};
+var ShaderLib = {};
 
   ShaderLib.noise3d = [
   '//',
@@ -128,7 +125,7 @@ var ShaderLib;
   '  return 42.0 * dot( m*m, vec4( dot(p0,x0), dot(p1,x1), ',
   '                                dot(p2,x2), dot(p3,x3) ) );',
   '}'].join('\n');
-  
+
   ShaderLib.noise2d = [
   '//',
   '// Description : Array and textureless GLSL 2D simplex noise function.',
@@ -200,4 +197,5 @@ var ShaderLib;
   '  g.yz = a0.yz * x12.xz + h.yz * x12.yw;',
   '  return 130.0 * dot(m, g);',
   '}'].join('\n');
-}());
+
+module.exports = ShaderLib;

@@ -1,0 +1,11 @@
+{
+    "name": "gpgpu",
+    "description": "webgl gpgpu library",
+    "homepage": "http://nashira.github.io/gpgpu",
+    "version": "0.0.1-dev",
+    "main": "main.js",
+    "dependencies": {
+      "browserify": "4.1.x",
+      "brfs": "1.1.x"
+    }
+}
