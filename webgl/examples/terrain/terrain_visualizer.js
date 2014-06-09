@@ -1,6 +1,10 @@
 var TerrainVisualizer;
 
 (function () {
+  var DataBuffer = require('gpgpu').DataBuffer;
+  var IndexBuffer = require('gpgpu').IndexBuffer;
+  var Matrix = require('gpgpu').Matrix;
+  
   var vertexShader = [
     'precision highp float;',
     'uniform mat4 mvMatrix;',

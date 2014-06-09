@@ -19,14 +19,15 @@ var Texture = function (width, height, params) {
     this.height = 1;
     this.init();
     this.setData(DEFAULT_TEXTURE_DATA);
+    var self = this;
     Utils.loadImage(params.image, function (img) {
-      this.width = width;
-      this.height = height;
-      this.setImage(img);
+      self.width = width;
+      self.height = height;
+      self.setImage(img);
       if (params.onLoad) {
-        params.onLoad(this, img);
+        params.onLoad(self, img);
       }
-    }.bind(this));
+    });
   } else if (params.image) {
     this.init();
     this.setImage(params.image);

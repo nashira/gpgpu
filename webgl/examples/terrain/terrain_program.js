@@ -1,19 +1,24 @@
 var TerrainGenerator;
 
 (function () {
+  var Program = require('gpgpu').Program;
+  var ShaderLib = require('gpgpu').ShaderLib;
+  var DataBuffer = require('gpgpu').DataBuffer;
+  var RenderTarget = require('gpgpu').RenderTarget;
+  var Texture = require('gpgpu').Texture;
 
   var vertexShader = [
     'precision highp float;',
     'attribute vec2 position;',
     'uniform float timeDelta;',
     'varying vec2 vCoords;',
-    
+
     'void main() {',
     '  vCoords = position;',
     '  gl_Position = vec4(position * 2. - 1., 0.0, 1.0);',
     '}'
     ].join('\n');
-  
+
   var fragmentShader = [
     'precision highp float;',
     'uniform float baseFreq;',
@@ -25,27 +30,27 @@ var TerrainGenerator;
     // 'const float base_amp = .00003125;',
 
     'uniform float time;',
-    
+
     'varying vec2 vCoords;',
 
     ShaderLib.noise3d,
-    
+
     'float rmnoise(vec2 pos, float freq, float amp) {',
     '  float val = 1. - abs(snoise(vec3(pos, time) * freq));',
     '  return val * val  * amp;',
     '}',
-    
+
     'float noise(vec2 pos, float freq, float amp) {',
     '  return (snoise(vec3(pos, time) * freq) + 1.) * amp;',
     '}',
-    
+
     'float fnoise(vec2 pos) {',
     '  float val = ',
     '      noise(pos, baseFreq, baseAmp * 2.)',
     '    + noise(pos, baseFreq * 8., baseAmp * .01);',
     '  return val;',
     '}',
-    
+
     'void main() {',
     // '  float height = (vCoords.x - 1.) * .01 + noise(vCoords, 4., .004);',
     '  float height = fnoise(vCoords + vec2(noiseX, noiseY));',
@@ -62,7 +67,7 @@ var TerrainGenerator;
     '}'
   ].join('\n');
 
-  
+
   var fluxLookup = [
   '  vec4 left, right, top, bottom;',
   '  left = texture2D(flux, vCoords + vec2(-cDelta, 0.));',
@@ -70,38 +75,38 @@ var TerrainGenerator;
   '  top = texture2D(flux, vCoords + vec2(0., cDelta));',
   '  bottom = texture2D(flux, vCoords + vec2(0., -cDelta));',
   ].join('\n');
-  
+
   var thermal1FS = [
     'precision highp float;',
     'const float cDelta = 1. / #{size}.;',
-    
+
     'uniform sampler2D erosion;',
     'uniform float timeDelta;',
     'uniform float talusAngle;',
     'varying vec2 vCoords;',
-    
+
     'void main() {',
     '  vec4 center = texture2D(erosion, vCoords);',
-    
+
     '  vec4 left = texture2D(erosion, vCoords - vec2(cDelta, 0.));',
     '  vec4 right = texture2D(erosion, vCoords + vec2(cDelta, 0.));',
     '  vec4 top = texture2D(erosion, vCoords + vec2(0., cDelta));',
     '  vec4 bottom = texture2D(erosion, vCoords - vec2(0., cDelta));',
-    
+
     '  float thermLeft = max(0., timeDelta * (center.x - left.x - talusAngle) * .5);',
     '  float thermRight = max(0., timeDelta * (center.x - right.x - talusAngle) * .5);',
     '  float thermTop = max(0., timeDelta * (center.x - top.x - talusAngle) * .5);',
     '  float thermBottom = max(0., timeDelta * (center.x - bottom.x - talusAngle) * .5);',
-    
+
     '  vec4 thermal = vec4(thermLeft, thermRight, thermTop, thermBottom);',
     '  float total = thermal.x + thermal.y + thermal.z + thermal.w;',
     '  float avail = max(thermLeft, max(thermRight, max(thermTop, thermBottom)));',
     '  float scale = min(1., avail / total);',
-    
+
     '  gl_FragColor = thermal * scale;',
     '}'
   ].join('\n');
-  
+
   var thermal2FS = [
     'precision highp float;',
     'uniform sampler2D erosion;',
@@ -109,7 +114,7 @@ var TerrainGenerator;
     'uniform float timeDelta;',
     'const float cDelta = 1. / #{size}.;',
     'varying vec2 vCoords;',
-    
+
     'void main() {',
     '  vec4 data = texture2D(erosion, vCoords);',
     '  vec4 center = texture2D(thermal, vCoords);',
@@ -121,7 +126,7 @@ var TerrainGenerator;
     '  gl_FragColor = data;',
     '}'
   ].join('\n');
-  
+
   var fluxFS = [
     'precision highp float;',
     'uniform sampler2D erosion;',
@@ -129,30 +134,30 @@ var TerrainGenerator;
     'uniform float timeDelta;',
     'const float cDelta = 1. / #{size}.;',
     'varying vec2 vCoords;',
-    
+
     'void main() {',
     '  vec4 oldFlux = texture2D(oldFlux, vCoords);',
     '  vec4 center = texture2D(erosion, vCoords);',
-    
+
     '  vec4 left = texture2D(erosion, vCoords - vec2(cDelta, 0.));',
     '  vec4 right = texture2D(erosion, vCoords + vec2(cDelta, 0.));',
     '  vec4 top = texture2D(erosion, vCoords + vec2(0., cDelta));',
     '  vec4 bottom = texture2D(erosion, vCoords - vec2(0., cDelta));',
-    
+
     '  float fluxLeft = max(0., oldFlux.x + timeDelta * (center.x + center.y - left.x - left.y));',
     '  float fluxRight = max(0., oldFlux.y + timeDelta * (center.x + center.y - right.x - right.y));',
     '  float fluxTop = max(0., oldFlux.z + timeDelta * (center.x + center.y - top.x - top.y));',
     '  float fluxBottom = max(0., oldFlux.w + timeDelta * (center.x + center.y - bottom.x - bottom.y));',
-    
+
     '  vec4 newFlux = vec4(fluxLeft, fluxRight, fluxTop, fluxBottom);',
     '  float total = newFlux.x + newFlux.y + newFlux.z + newFlux.w;',
     '  float scale = min(1., center.y / (total));',
-    
+
     '  gl_FragColor = newFlux * scale;',
     '}'
   ].join('\n');
 
-  
+
   var waterLevelFS = [
     'precision highp float;',
     'const float cDelta = 1. / #{size}.;',
@@ -160,7 +165,7 @@ var TerrainGenerator;
     'uniform sampler2D flux;',
     'uniform float timeDelta;',
     'varying vec2 vCoords;',
-    
+
     'void main() {',
     '  vec4 data = texture2D(erosion, vCoords);',
     '  vec4 center = texture2D(flux, vCoords);',
@@ -169,14 +174,14 @@ var TerrainGenerator;
     '  gl_FragColor = data;',
     '}'
   ].join('\n');
-  
+
   var velocityFS = [
     'precision highp float;',
     'uniform sampler2D flux;',
     'uniform float timeDelta;',
     'const float cDelta = 1. / #{size}.;',
     'varying vec2 vCoords;',
-    
+
     'void main() {',
     '  vec4 center = texture2D(flux, vCoords);',
     fluxLookup,
@@ -184,11 +189,11 @@ var TerrainGenerator;
     '  gl_FragColor = vec4(velocity, 1.);',
     '}'
   ].join('\n');
-  
+
   var erosionDepFS = [
     'precision highp float;',
     'const float cDelta = 1. / #{size}.;',
-    
+
     'uniform sampler2D erosion;',
     'uniform sampler2D velocity;',
     'uniform float minCapacity;',
@@ -196,7 +201,7 @@ var TerrainGenerator;
     'uniform float sedimentErosion;',
     'uniform float sedimentDeposition;',
     'uniform float timeDelta;',
-    
+
     'varying vec2 vCoords;',
 
     'vec3 getNormal(vec2 coord) {',
@@ -204,13 +209,13 @@ var TerrainGenerator;
     '  float h2 = texture2D(erosion, coord + vec2(cDelta, 0)).x;',
     '  float h3 = texture2D(erosion, coord + vec2(0., cDelta)).x;',
     '  float h4 = texture2D(erosion, coord + vec2(0., -cDelta)).x;',
-    
+
     '  vec3 c1 = vec3(coord.x - cDelta, h1, coord.y) - vec3(coord.x + cDelta, h2, coord.y);',
     '  vec3 c2 = vec3(coord.x, h3, coord.y + cDelta) - vec3(coord.x, h4, coord.y - cDelta);',
-    
+
     '  return normalize(cross(c1, c2));',
     '}',
-    
+
     'void main() {',
     '  vec4 data = texture2D(erosion, vCoords);',
     '  vec4 velo = texture2D(velocity, vCoords);',
@@ -220,7 +225,7 @@ var TerrainGenerator;
     '  float capacity = minCapacity + length(v) * (1. - smoothstep(0., 1., data.y * waterDepthFalloff));',
     '  float sedimentFactor = sedimentErosion;',
     '  if (data.z > capacity) sedimentFactor = sedimentDeposition;',
-    // 
+    //
     '  float terrainChange = timeDelta * sedimentFactor * (data.z - capacity);',
     '  data.x += terrainChange;',
     '  data.z -= terrainChange;',
@@ -228,34 +233,34 @@ var TerrainGenerator;
     '  gl_FragColor = data;',
     '}'
   ].join('\n');
-  
-  
+
+
   var sedimentFS = [
     'precision highp float;',
     'const float cDelta = 1. / #{size}.;',
-    
+
     'uniform float evaporation;',
     'uniform float rain;',
     'uniform sampler2D erosion;',
     'uniform sampler2D velocity;',
     'uniform float timeDelta;',
-    
+
     'varying vec2 vCoords;',
-    
+
     'void main() {',
     '  vec4 data = texture2D(erosion, vCoords);',
-    
+
     '  vec2 velo = texture2D(velocity, vCoords).xz;',
     '  data.z = texture2D(erosion, vCoords - velo * timeDelta).z;',
     '  data.y = data.y * (1. - evaporation) + rain;',
     '  gl_FragColor = data;',
     '}'
   ].join('\n');
-  
-  
+
+
   TerrainGenerator = function (width, height) {
     var position = new DataBuffer(2, 4, new Float32Array([0,0, 0,1, 1,0, 1,1]));
-    // 
+    //
     // var params = {type: gl.FLOAT, wrapS: gl.REPEAT, wrapT: gl.REPEAT};
     var params = {type: gl.FLOAT};
     this.erosionTarget = new RenderTarget(width, height, params);
@@ -263,7 +268,7 @@ var TerrainGenerator;
     this.velocityTarget = new RenderTarget(width, height, params);
     this.thermalTarget = new RenderTarget(width, height, params);
     this.tmpRenderTarget = new RenderTarget(width, height, params);
-    
+
     function newProgram(fs) {
       fs = fs.replace(/#\{size\}/g, width);
       var p = new Program(vertexShader, fs, {
@@ -278,15 +283,15 @@ var TerrainGenerator;
     this.genProgram.addUniform('baseAmp', 'f');
     this.genProgram.addUniform('noiseX', 'f');
     this.genProgram.addUniform('noiseY', 'f');
-    
+
     this.thermal1Program = newProgram(thermal1FS);
     this.thermal1Program.addUniform('erosion', 't');
     this.thermal1Program.addUniform('talusAngle', 'f');
-    
+
     this.thermal2Program = newProgram(thermal2FS);
     this.thermal2Program.addUniform('erosion', 't');
     this.thermal2Program.addUniform('thermal', 't');
-    
+
     this.fluxProgram = newProgram(fluxFS);
     this.fluxProgram.addUniform('erosion', 't');
     this.fluxProgram.addUniform('oldFlux', 't');
@@ -316,12 +321,12 @@ var TerrainGenerator;
       minFilter: gl.LINEAR,
       magFilter: gl.LINEAR
     });
-    
+
     this.wrapTexture = new Texture(width, height, {
       wrapS: gl.REPEAT,
       wrapT: gl.REPEAT
     });
-    
+
     this.count = 0;
     this.coordDelta = 1 / width;
     this.params = {
@@ -342,11 +347,11 @@ var TerrainGenerator;
       hydraulicTimeDelta: 0.05
     }
   }
-  
+
   TerrainGenerator.init = function () {}
-  
+
   TerrainGenerator.prototype = {
-    
+
     generate: function () {
       this.genProgram.setRenderTarget(this.tmpRenderTarget);
       this.genProgram.setUniform('baseFreq', this.params.baseFreq);
@@ -356,14 +361,14 @@ var TerrainGenerator;
       this.genProgram.draw(0, 4);
       this.swapTargets('tmpRenderTarget', 'erosionTarget');
     },
-    
+
     addWater: function () {
       this.addWaterProgram.setRenderTarget(this.tmpRenderTarget);
       this.addWaterProgram.setUniform('erosion', this.erosionTarget.getGlTexture());
       this.addWaterProgram.draw(0, 4);
       this.swapTargets('tmpRenderTarget', 'erosionTarget');
     },
-    
+
     thermal1: function () {
       this.thermal1Program.setRenderTarget(this.tmpRenderTarget);
       this.thermal1Program.setUniform('timeDelta', this.params.thermalTimeDelta);
@@ -372,7 +377,7 @@ var TerrainGenerator;
       this.thermal1Program.draw(0, 4);
       this.swapTargets('tmpRenderTarget', 'thermalTarget');
     },
-    
+
     thermal2: function () {
       this.thermal2Program.setRenderTarget(this.tmpRenderTarget);
       this.thermal2Program.setUniform('timeDelta', this.params.thermalTimeDelta);
@@ -381,7 +386,7 @@ var TerrainGenerator;
       this.thermal2Program.draw(0, 4);
       this.swapTargets('tmpRenderTarget', 'erosionTarget');
     },
-    
+
     computeFlux: function () {
       this.fluxProgram.setRenderTarget(this.tmpRenderTarget);
       this.fluxProgram.setUniform('timeDelta', this.params.hydraulicTimeDelta);
@@ -390,7 +395,7 @@ var TerrainGenerator;
       this.fluxProgram.draw(0, 4);
       this.swapTargets('tmpRenderTarget', 'fluxTarget');
     },
-    
+
     waterLevel: function () {
 
       this.wrapTexture.glTexture = this.fluxTarget.getGlTexture();
@@ -403,7 +408,7 @@ var TerrainGenerator;
       this.fluxTarget.texture.applyParameters();
       this.swapTargets('tmpRenderTarget', 'erosionTarget');
     },
-    
+
     waterVelocity: function () {
       this.velocityProgram.setRenderTarget(this.tmpRenderTarget);
       this.velocityProgram.setUniform('timeDelta', this.params.hydraulicTimeDelta);
@@ -411,7 +416,7 @@ var TerrainGenerator;
       this.velocityProgram.draw(0, 4);
       this.swapTargets('tmpRenderTarget', 'velocityTarget');
     },
-    
+
     erosionDeposition: function () {
       this.erosionProgram.setRenderTarget(this.tmpRenderTarget);
       this.erosionProgram.setUniform('timeDelta', this.params.hydraulicTimeDelta);
@@ -424,7 +429,7 @@ var TerrainGenerator;
       this.erosionProgram.draw(0, 4);
       this.swapTargets('tmpRenderTarget', 'erosionTarget');
     },
-    
+
     sedimentTransport: function () {
       this.linearTexture.glTexture = this.erosionTarget.getGlTexture();
       this.linearTexture.applyParameters();
@@ -438,13 +443,13 @@ var TerrainGenerator;
       this.erosionTarget.texture.applyParameters();
       this.swapTargets('tmpRenderTarget', 'erosionTarget');
     },
-    
+
     swapTargets: function (a, b) {
       var t = this[a];
       this[a] = this[b];
       this[b] = t;
     },
-    
+
     step: function () {
       this.count ++;
       if (this.params.thermalEnabled) {

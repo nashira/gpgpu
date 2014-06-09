@@ -6,7 +6,9 @@ var Texture = require('./texture');
 
 var gl;
 
-var log = function () {}
+var log = function () {
+  // console.log.apply(console, arguments);
+}
 
 var Program = function (vertexShader, fragmentShader, params) {
   params = params || {};

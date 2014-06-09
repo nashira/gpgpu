@@ -10,6 +10,14 @@ var ShaderLib = require('./webgl/src/shaderlib');
 var Texture = require('./webgl/src/texture');
 var Utils = require('./webgl/src/utils');
 
+// var DataBuffer = require('./webgl/src/ins/databuffer');
+// var IndexBuffer = require('./webgl/src/ins/indexbuffer');
+// var Program = require('./webgl/src/ins/program');
+// var RenderTarget = require('./webgl/src/ins/rendertarget');
+// var ShaderLib = require('./webgl/src/ins/shaderlib');
+// var Texture = require('./webgl/src/ins/texture');
+// var Utils = require('./webgl/src/ins/utils');
+
 module.exports = {
   DataBuffer: DataBuffer,
   IndexBuffer: IndexBuffer,
@@ -81,7 +89,9 @@ var Texture = require('./texture');
 
 var gl;
 
-var log = function () {}
+var log = function () {
+  // console.log.apply(console, arguments);
+}
 
 var Program = function (vertexShader, fragmentShader, params) {
   params = params || {};
@@ -262,7 +272,10 @@ Program.prototype.setRenderTarget = function (renderTarget, setViewport) {
 }
 
 Program.prototype.setViewport = function (x, y, w, h) {
-  this.viewport = {x: x, y: y, w: w, h: h};
+  this.viewport.x = x;
+  this.viewport.y = y;
+  this.viewport.w = w;
+  this.viewport.h = h;
 }
 
 Program.prototype.draw = function (first, count) {
@@ -596,14 +609,15 @@ var Texture = function (width, height, params) {
     this.height = 1;
     this.init();
     this.setData(DEFAULT_TEXTURE_DATA);
+    var self = this;
     Utils.loadImage(params.image, function (img) {
-      this.width = width;
-      this.height = height;
-      this.setImage(img);
+      self.width = width;
+      self.height = height;
+      self.setImage(img);
       if (params.onLoad) {
-        params.onLoad(this, img);
+        params.onLoad(self, img);
       }
-    }.bind(this));
+    });
   } else if (params.image) {
     this.init();
     this.setImage(params.image);
@@ -695,7 +709,6 @@ THE SOFTWARE.
 var DataBuffer = require('./databuffer');
 var ShaderLib = require('./shaderlib');
 
-// var path = require('path');
 
 var Utils = {};
 
@@ -755,30 +768,38 @@ Utils.loadFile = function (url, onLoad) {
   xhr.send();
 }
 
-Utils.loadShaders = function (urls) {
+Utils.processShader = function (text) {
+  var libre = /\$\{([^}]*)\}/g;
+  var match;
+  while (match = libre.exec(text)) {
+    text = text.replace(match[0], ShaderLib[match[1]]);
+  }
+  return text;
+}
+
+Utils.loadShaders = function (urls, onLoad) {
   var libre = /\$\{([^}]*)\}/g;
   var results = urls.map(function () {
     return false;
   });
-
   urls.forEach(function (url, index) {
     fs.readFile(url, 'utf8', function (error, file) {
       if (error) console.log(error)
-        var text = file;
+      var text = file;
 
-        var match;
-        while (match = libre.exec(text)) {
-          text = text.replace(match[0], ShaderLib[match[1]]);
-        }
+      var match;
+      while (match = libre.exec(text)) {
+        text = text.replace(match[0], ShaderLib[match[1]]);
+      }
 
-        results[index] = text;
+      results[index] = text;
 
-        if (onLoad && results.every(function (r) {
-          return r;
-        })) {
-          onLoad(results);
-        }
-      });
+      if (onLoad && results.every(function (r) {
+        return r;
+      })) {
+        onLoad(results);
+      }
+    });
   });
 }
 

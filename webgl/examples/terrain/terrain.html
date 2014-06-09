@@ -23,17 +23,13 @@
   <canvas id="canvas"></canvas>
 
   <script src='../lib/dat.gui.min.js'></script>
-  <script src='../../src/program.js'></script>
-  <script src='../../src/databuffer.js'></script>
-  <script src='../../src/indexbuffer.js'></script>
-  <script src='../../src/rendertarget.js'></script>
-  <script src='../../src/texture.js'></script>
-  <script src='../../src/utils.js'></script>
-  <script src='../../src/shaderlib.js'></script>
+  <script src='../../../build/gpgpu.js'></script>
   <script src='terrain_program.js'></script>
   <script src='terrain_visualizer.js'></script>
 
   <script>
+    var Program = require('gpgpu').Program;
+    var Matrix = require('gpgpu').Matrix;
     var canvas = document.getElementById('canvas');
     var devicePixelRatio = window.devicePixelRatio || 1;
     var w = window.innerWidth;
@@ -45,7 +41,7 @@
     Program.init(gl);
 
     var width, height;
-    width = height = 1200;
+    width = height = 1024;
 
     var terrainGen = new TerrainGenerator(width, height);
     var terrainVis = new TerrainVisualizer(width, height, w * devicePixelRatio, h * devicePixelRatio);
@@ -68,9 +64,9 @@
       });
     }
 
-    terrainGen.params.thermalEnabled = false;
-    terrainGen.params.hydraulicEnabled = false;
-    terrainVis.params.renderWater = false;
+    // terrainGen.params.thermalEnabled = false;
+    // terrainGen.params.hydraulicEnabled = false;
+    // terrainVis.params.renderWater = false;
 
     var gui = new dat.GUI();
     var folder = gui.addFolder('Visualization');
@@ -115,7 +111,7 @@
     var matrix = [];
     Matrix.multiply(matrix, sm, rm, tm);
 
-    // terrainGen.generate();
+    terrainGen.generate();
     animate();
 
     function animate() {
